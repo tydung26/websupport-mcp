@@ -91,6 +91,9 @@ reappears — the boundary is enforced structurally, not by review.
 - Version `0.1.0` is the one exception and carries **no provenance attestation** — it was published
   by hand before the package existed, which is a precondition for registering a trusted publisher.
   Every later version is attested.
+- The MCP Registry entry is published from the same job under the same OIDC identity. The
+  `mcp-publisher` binary is pinned by SHA-256 and the checksum verified before it runs, because it
+  is granted permission to publish under this namespace.
 - `npm pack` contents are asserted in CI: exactly one bundled entrypoint, and no `.env`, sources or
   tests.
 - Dependabot covers npm and GitHub Actions weekly; CodeQL runs on every push and pull request.

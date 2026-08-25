@@ -94,6 +94,30 @@ jobs:
           # this workflow filename.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # The MCP Registry references the npm package, so it is only meaningful
+      # once the publish above has succeeded. Authenticated by the same OIDC
+      # identity as npm — no credential, and no interactive browser login.
+      #
+      # `workflow_dispatch` is an escape hatch: it lets the registry entry be
+      # (re)published for the current version without a new release, which is
+      # how the first entry was created after the package was already on npm.
+      - name: Publish to the MCP Registry
+        if: steps.changesets.outputs.published == 'true' || github.event_name == 'workflow_dispatch'
+        env:
+          PUBLISHER_VERSION: v1.8.1
+          # Pinned so a tampered or swapped release binary fails loudly rather
+          # than running with permission to publish under this namespace.
+          PUBLISHER_SHA256: a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
+        run: |
+          set -euo pipefail
+          curl -fsSL -o publisher.tar.gz \
+            "https://github.com/modelcontextprotocol/registry/releases/download/${PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz"
+          echo "${PUBLISHER_SHA256}  publisher.tar.gz" | sha256sum -c -
+          tar xzf publisher.tar.gz mcp-publisher
+          ./mcp-publisher validate
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish
+
       - name: Report
         if: always()
         run: |

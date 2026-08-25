@@ -86,8 +86,13 @@ Nothing publishes automatically. The pipeline has a deliberate human gate in the
 3. **Merging that PR publishes.** Only then does `changeset publish` push to npm. Authentication is
    npm trusted publishing — the workflow's OIDC identity, no token anywhere — and provenance is
    generated automatically as a result. Nothing needs to be held in repository secrets.
-4. **Registry publish is separate and manual**, via `mcp-publisher login github` then
-   `mcp-publisher publish`.
+4. **The MCP Registry entry publishes in the same job**, straight after npm, authenticated by the
+   same OIDC identity — no interactive login and no credential. The publisher binary is pinned by
+   SHA-256, since it is handed permission to publish under this namespace.
+
+Running the release workflow manually (`workflow_dispatch`) republishes the registry entry for the
+current version without cutting a new release. That is how the first entry was created, the package
+having already been on npm by then.
 
 `server.json` is not shipped in the npm tarball — it describes the package to the MCP Registry.
 Its version is synced from `package.json` during step 2, because `changeset version` knows nothing
