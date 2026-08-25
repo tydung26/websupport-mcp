@@ -1,20 +1,22 @@
-import { readFileSync } from 'node:fs'
+import specJson from '../../../assets/websupport-v2-openapi.json' with { type: 'json' }
 
 /**
  * The vendored v2 OpenAPI spec, and the enums derived from it.
  *
  * Eight paths does not justify codegen, but hand-retyping the enums does
- * guarantee drift. So the spec ships as an asset and the values are read out of
- * it at startup: a Websupport change to the record-type list shows up as a
- * schema change here without anyone editing TypeScript.
+ * guarantee drift. So the spec is imported as a module and the values are read
+ * out of it: a Websupport change to the record-type list shows up as a schema
+ * change here without anyone editing TypeScript.
+ *
+ * Imported rather than read from disk at runtime so the bundler inlines it.
+ * A `readFileSync` relative to `import.meta.url` would resolve differently
+ * before and after bundling, and would break the moment the output collapsed
+ * to a single file.
  *
  * Baseline 2026-08-25: OpenAPI 3.0.0, 8 paths, 15 schemas, md5
  * `72f9da3c894253e554a57252727f9afd`, byte-identical across
  * `rest.websupport.{sk,cz,hu,se}`.
  */
-
-/** Resolves identically from `src/tools/v2/` and the built `dist/tools/v2/`. */
-export const SPEC_PATH = new URL('../../../assets/websupport-v2-openapi.json', import.meta.url)
 
 export interface OpenApiSpec {
   openapi: string
@@ -22,7 +24,7 @@ export interface OpenApiSpec {
   components: { schemas: Record<string, unknown> }
 }
 
-export const spec = JSON.parse(readFileSync(SPEC_PATH, 'utf8')) as OpenApiSpec
+export const spec = specJson as unknown as OpenApiSpec
 
 function enumAt(path: (string | number)[]): string[] {
   let node: unknown = spec

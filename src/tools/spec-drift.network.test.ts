@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { KNOWN_API_HOSTS } from '../auth/market-hosts.js'
-import { SPEC_PATH, spec } from './v2/openapi-spec.js'
+import { spec } from './v2/openapi-spec.js'
 
 /**
  * Drift watch on the vendored v2 spec.
@@ -15,6 +16,11 @@ import { SPEC_PATH, spec } from './v2/openapi-spec.js'
  */
 
 const SPEC_URL = '/v2/docs/openapi.json'
+/**
+ * Read from the repository, not from the bundle: the md5 must be over the
+ * vendored file's exact bytes, and this suite only ever runs from source.
+ */
+const SPEC_PATH = fileURLToPath(new URL('../../assets/websupport-v2-openapi.json', import.meta.url))
 const VENDORED = readFileSync(SPEC_PATH)
 const VENDORED_MD5 = createHash('md5').update(VENDORED).digest('hex')
 
