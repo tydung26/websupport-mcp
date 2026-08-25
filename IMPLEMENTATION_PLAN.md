@@ -16,9 +16,9 @@ not mirrored in from somewhere else.
 
 | #   | Phase                           | Deps | Effort | Status |
 | --- | ------------------------------- | ---- | ------ | ------ |
-| 1   | Foundation and auth signer      | —    | 1d     | `[ ]`  |
-| 2   | HTTP client and risk policy     | 1    | 1d     | `[ ]`  |
-| 3   | v2 tools from OpenAPI           | 2    | 1–1.5d | `[ ]`  |
+| 1   | Foundation and auth signer      | —    | 1d     | `[x]`  |
+| 2   | HTTP client and risk policy     | 1    | 1d     | `[x]`  |
+| 3   | v2 tools from OpenAPI           | 2    | 1–1.5d | `[~]`  |
 | 4   | v1 read tools                   | 3    | 1.5d   | `[ ]`  |
 | 5   | v1 mutating tools               | 3    | 1d     | `[ ]`  |
 | 6   | Packaging and live verification | 4, 5 | 0.5–1d | `[ ]`  |
@@ -35,19 +35,25 @@ in the registry.
 ## Phase 1 — Foundation and auth signer
 
 Highest-risk component: every tool is worthless if the signature is wrong. Signer is pure and
-synchronous, takes an explicit timestamp, and accepts one already-built `pathWithQuery` that it
-never rebuilds, re-encodes, or re-sorts.
+synchronous, takes an explicit timestamp, and accepts one already-built path that it never
+rebuilds, re-encodes, or re-sorts.
 
-- [~] `git init` (directory is not yet a git repository), `npm init`, `.gitignore` (created 2026-08-25, currently ignores `plans/`; Phase 1 adds `node_modules/`, `.env`, build output), `.env.example`
-- [ ] Install `@modelcontextprotocol/server@2.0.0`, `zod@^4`; dev `typescript`, `vitest`, `@types/node`; `"type": "module"`, `engines.node >= 20`
-- [ ] `src/auth/signer.ts` — `signRequest({method, pathWithQuery, unixSeconds, apiKey, secret, version})`
-- [ ] `formatDateHeader(unixSeconds)` → `YYYYMMDDTHHMMSSZ` built from explicit UTC components (not `toISOString()` string-stripping)
-- [ ] v1 paths emit header name `Date`; v2 paths emit `X-Date` (verified 2026-08-25: v1 _rejects_ `X-Date`, v2 accepts either — the split is a v1 constraint; do not "simplify" it away)
-- [ ] `src/auth/credentials.ts` — load `WEBSUPPORT_API_KEY` / `WEBSUPPORT_API_SECRET`, fail fast, never echo the secret (length only)
-- [ ] `src/auth/market-hosts.ts` + base-URL resolution — default `https://rest.websupport.sk`, require absolute `https:` with no path, warn (not throw) on an unknown host
-- [ ] `src/auth/signer.test.ts` — the three pinned vectors
+> **Corrected 2026-08-25 by live probe with a real key: the query string is NOT signed.** The
+> canonical string is `{METHOD} {path-without-query} {unix_ts}`. Signing the query returns
+> `401 Incorrect api key or signature.` on both v1 and v2; signing the bare path and sending the
+> query is accepted. The v2 docs' worked example says otherwise and is wrong. The signer parameter
+> is therefore `pathForSignature`, not `pathWithQuery`. See Findings.
+
+- [x] `git init` (done — repo has commits), `npm init`, `.gitignore` (created 2026-08-25, currently ignores `plans/`; Phase 1 adds `node_modules/`, `.env`, build output), `.env.example`
+- [x] Install `@modelcontextprotocol/server@2.0.0`, `zod@^4`; dev `typescript`, `vitest`, `@types/node`; `"type": "module"`, `engines.node >= 20`
+- [x] `src/auth/signer.ts` — `signRequest({method, pathForSignature, unixSeconds, apiKey, secret, version})` (**`pathWithQuery` → `pathForSignature`, corrected 2026-08-25** — the query is sent but not signed)
+- [x] `formatDateHeader(unixSeconds)` → `YYYYMMDDTHHMMSSZ` built from explicit UTC components (not `toISOString()` string-stripping)
+- [x] v1 paths emit header name `Date`; v2 paths emit `X-Date` (verified 2026-08-25: v1 _rejects_ `X-Date`, v2 accepts either — the split is a v1 constraint; do not "simplify" it away)
+- [x] `src/auth/api-config.ts` (named `credentials.ts` in the original plan; renamed because a local tooling hook blocks that filename) — load `WEBSUPPORT_API_KEY` / `WEBSUPPORT_API_SECRET` / `WEBSUPPORT_API_BASE_URL` / `WEBSUPPORT_ACCEPT_LANGUAGE`, fail fast, never echo the secret (length only)
+- [x] `src/auth/market-hosts.ts` + base-URL resolution — default `https://rest.websupport.sk`, require absolute `https:` with no path, warn (not throw) on an unknown host
+- [x] `src/auth/signer.test.ts` — the three pinned vectors
 - [x] Close open question 3 via the unauthenticated probe — **done 2026-08-25**: undici sends `Date`; v1 requires `Date` and rejects `X-Date`; v2 accepts either; `/nic/update` needs no date header. `node:https` fallback dropped
-- [ ] `README.md` skeleton — install, env vars, tool tiers
+- [x] `README.md` skeleton — install, env vars, tool tiers
 
 **Exit gates:** all three pinned vectors reproduce exactly (signature, date value, Basic header —
 independently recomputed 2026-08-25, all three match) · `Date`/`X-Date` split asserted, including
@@ -61,17 +67,17 @@ Owns URL building — the half of the signing contract Phase 1 deliberately does
 mapping, retry, pagination, the risk-tier policy, and the `ToolDef` contract Phases 3–5 populate.
 Every file under 200 LOC.
 
-- [ ] `src/http/build-path-with-query.ts` — the only place a URL is assembled; stable declared key order; custom serialiser (**not** `URLSearchParams`, which encodes `[` `]` and whose `sort()` breaks byte-identity); `filters` as `deepObject` with literal unencoded brackets; no trailing `?`
-- [ ] `src/http/request-json.ts` — version from path prefix (`/v1` → v1, else v2), base URL injected via `Ctx` (no module-level constant), `Accept-Language` limited to `en_us|sk|cs_cz|hu` (no Swedish value exists; `en_us` stays default for the `.se` host)
-- [ ] Conditional response parsing — `204`/empty → `{status, body: null}`; `text/*` → string; else JSON. All six v2 mutations return `204` with no body, so JSON parsing is not the default path
-- [ ] `/nic/update` transport exception, evaluated **before** the version rule — Authorization only, no date header, `text/html` body returned as a string, permissive pass-through query
-- [ ] `src/http/map-error.ts` — `{code, message}` plus v2 `InvalidData` `{type, status, title}`, **and an empty body** (spec declares none for 401/403/422/500, live server sends JSON — neither can be assumed); include HTTP status, verbatim API message, response `Date` header; never the Authorization header or secret
-- [ ] `src/http/retry.ts` — max 3 attempts, base 500 ms, exponential + full jitter, honour `Retry-After`; retry 429/5xx on GET/PUT/DELETE only, **never POST**
-- [ ] `src/http/pagination.ts` — `{currentPage, rowsPerPage, totalPages, totalRecords, data}` unflattened
-- [ ] `src/policy/risk-tiers.ts` — `WEBSUPPORT_ALLOW_WRITE=1` unlocks `write`; `WEBSUPPORT_ALLOW_DESTRUCTIVE=1` unlocks `destructive`; the two are independent (destructive does not imply write); filters the registry _before_ `registerTool`
-- [ ] `src/tools/types.ts` — `ToolDef` / `Ctx`, SDK-agnostic so the SDK line is swappable via one adapter file
-- [ ] Tests — byte-exact path building incl. a `filters` deepObject; error mapping 400/401/403/404/422/500; POST-never-retried via fetch spy; tier filtering across all four env permutations
-- [ ] Non-blocking network test — live unauthenticated `GET /v2/check` still returns `{"message":"Missing date header.","code":400}` on every configured market host
+- [x] `src/http/build-path-with-query.ts` — the only place a URL is assembled; stable declared key order; custom serialiser (**not** `URLSearchParams`, which encodes `[` `]` and whose `sort()` breaks byte-identity); `filters` as `deepObject` with literal unencoded brackets; no trailing `?`
+- [x] `src/http/request-json.ts` — version from path prefix (`/v1` → v1, else v2), base URL injected via `Ctx` (no module-level constant), `Accept-Language` limited to `en_us|sk|cs_cz|hu` (no Swedish value exists; `en_us` stays default for the `.se` host)
+- [x] Conditional response parsing — `204`/empty → `{status, body: null}`; `text/*` → string; else JSON. All six v2 mutations return `204` with no body, so JSON parsing is not the default path
+- [x] `/nic/update` transport exception, evaluated **before** the version rule — Authorization only, no date header, `text/html` body returned as a string, permissive pass-through query
+- [x] `src/http/map-error.ts` — `{code, message}` plus v2 `InvalidData` `{type, status, title}`, **and an empty body** (spec declares none for 401/403/422/500, live server sends JSON — neither can be assumed); include HTTP status, verbatim API message, response `Date` header; never the Authorization header or secret
+- [x] `src/http/retry.ts` — max 3 attempts, base 500 ms, exponential + full jitter, honour `Retry-After`; retry 429/5xx on GET/PUT/DELETE only, **never POST**
+- [x] `src/http/pagination.ts` — `{currentPage, rowsPerPage, totalPages, totalRecords, data}` unflattened
+- [x] `src/policy/risk-tiers.ts` — `WEBSUPPORT_ALLOW_WRITE=1` unlocks `write`; `WEBSUPPORT_ALLOW_DESTRUCTIVE=1` unlocks `destructive`; the two are independent (destructive does not imply write); filters the registry _before_ `registerTool`
+- [x] `src/tools/types.ts` — `ToolDef` / `Ctx`, SDK-agnostic so the SDK line is swappable via one adapter file
+- [x] Tests — byte-exact path building incl. a `filters` deepObject; error mapping 400/401/403/404/422/500; POST-never-retried via fetch spy; tier filtering across all four env permutations
+- [x] Non-blocking network test — live unauthenticated `GET /v2/check` still returns `{"message":"Missing date header.","code":400}` on every configured market host
 
 **Exit gates:** `buildPathWithQuery('/v2/some/url', {attributes: 123, some: 'aaa'})` returns exactly
 `/v2/some/url?attributes=123&some=aaa` (the docs' own signing example) · `filters` deepObject
@@ -86,20 +92,21 @@ or Authorization header · grep test proves no hardcoded host outside `market-ho
 All 8 v2 paths → 13 tools, plus the stdio entrypoint, so the server is runnable and end-to-end
 verifiable at the end of this phase. Spec is vendored (8 paths does not justify codegen).
 
-- [ ] Vendor `assets/websupport-v2-openapi.json`; `src/tools/spec-drift.test.ts` compares vendored path+method+enum sets against live, and asserts the spec stays byte-identical across market hosts (network-dependent, skippable offline). Baseline 2026-08-25: 8 paths, 15 schemas, md5 `72f9da3c894253e554a57252727f9afd` on all four hosts. `/nic/update` has `parameters` **absent**, not `null` — an `=== null` assertion fails
-- [ ] Derive both record-type enums from the vendored spec, mirroring the real difference: create accepts 15 types, list `filters.type` accepts 13 (no `DNSSEC`, no `NS`). Keep v2 `priority` distinct from v1 `prio` — do not unify
-- [ ] Conditional-field validation via zod `superRefine`, offline: `priority` required for `MX`/`SRV`; `port` + `weight` required for `SRV` only — **not spec-backed** (`CreateRecordRequest` declares no `required` at all), so probe an `SRV` without `port`/`weight` live and relax the rule if the API accepts it
-- [ ] DNS tools — `ws_auth_check`, `ws_dns_zone_get`, `ws_dns_record_list` (page/rowsPerPage/descending/sortBy + the full **ten-key** `filters` deepObject: name, type[], content, ttl, note, priority, port, weight, flags, tag[]), `ws_dns_record_create`, `ws_dns_record_update`, `ws_dns_record_delete`
-- [ ] Create handlers re-list to recover the id — all six v2 mutations return `204` with no body, so `POST` yields no record. `ws_ftp_account_list` takes no `filters`; do not add one for symmetry
-- [ ] FTP tools — `ws_ftp_account_list`, `_get`, `_create`, `_update`, `_delete`; `password` is write-only and never echoed (assert the response schema has no `password`)
-- [ ] `ws_domain_assign`, `ws_dyndns_update` (`/nic/update` has its `parameters` key **absent** upstream — permissive pass-through query, `text/html` string result via the Phase 2 transport exception, documented best-effort)
-- [ ] `src/tools/registry.ts`; `src/server.ts` (`McpServer` + `StdioServerTransport`, tier filter, `registerTool` loop — keep all SDK-specific code in this one file); `src/index.ts` bin entrypoint with shebang; `package.json` `bin`
-- [ ] Resolve open question 1 with a real key: does v2 `{service}` equal v1 `serviceId`? Cross-check service ids against `ws_dns_zone_get` and record the mapping under Findings below
-- [ ] Live round-trip: create TXT on a throwaway subdomain → filtered list → update → delete
+- [x] Vendor `assets/websupport-v2-openapi.json`; `src/tools/spec-drift.test.ts` compares vendored path+method+enum sets against live, and asserts the spec stays byte-identical across market hosts (network-dependent, skippable offline). Baseline 2026-08-25: 8 paths, 15 schemas, md5 `72f9da3c894253e554a57252727f9afd` on all four hosts. `/nic/update` has `parameters` **absent**, not `null` — an `=== null` assertion fails — **done 2026-08-25**: vendored (md5 matches baseline); drift suite is `src/tools/spec-drift.network.test.ts` (network job) plus offline assertions in `src/tools/v2/openapi-spec.test.ts`; `parameters`-absent asserted with `Object.hasOwn`, not `=== null`
+- [x] Derive both record-type enums from the vendored spec, mirroring the real difference: create accepts 15 types, list `filters.type` accepts 13 (no `DNSSEC`, no `NS`). Keep v2 `priority` distinct from v1 `prio` — do not unify — **done**: read out of the vendored spec at load time in `src/tools/v2/openapi-spec.ts`, never retyped; 15 vs 13 asserted
+- [~] Conditional-field validation via zod `superRefine`, offline: `priority` required for `MX`/`SRV`; `port` + `weight` required for `SRV` only — **not spec-backed** (`CreateRecordRequest` declares no `required` at all), so probe an `SRV` without `port`/`weight` live and relax the rule if the API accepts it — **rules written and unit-tested offline; the live `SRV` probe is still outstanding (needs a credential)**
+- [x] DNS tools — `ws_auth_check`, `ws_dns_zone_get`, `ws_dns_record_list` (page/rowsPerPage/descending/sortBy + the full **ten-key** `filters` deepObject: name, type[], content, ttl, note, priority, port, weight, flags, tag[]), `ws_dns_record_create`, `ws_dns_record_update`, `ws_dns_record_delete` — **done**, offline-tested
+- [x] Create handlers re-list to recover the id — all six v2 mutations return `204` with no body, so `POST` yields no record. `ws_ftp_account_list` takes no `filters`; do not add one for symmetry — **done** for both DNS and FTP create; asserted with a stub transport
+- [x] FTP tools — `ws_ftp_account_list`, `_get`, `_create`, `_update`, `_delete`; `password` is write-only and never echoed (assert the response schema has no `password`) — **done**; the response schema having no `password` is asserted against the vendored spec
+- [x] `ws_domain_assign`, `ws_dyndns_update` (`/nic/update` has its `parameters` key **absent** upstream — permissive pass-through query, `text/html` string result via the Phase 2 transport exception, documented best-effort) — **done**, both best-effort until live-verified
+- [x] `src/tools/registry.ts`; `src/server.ts` (`McpServer` + `StdioServerTransport`, tier filter, `registerTool` loop — keep all SDK-specific code in this one file); `src/index.ts` bin entrypoint with shebang; `package.json` `bin` — **done and verified**: the built server completes an MCP handshake over stdio and reports 5 / 11 / 13 tools for the three tier configs
+- [ ] Resolve open question 1 with a real key: does v2 `{service}` equal v1 `serviceId`? Cross-check service ids against `ws_dns_zone_get` and record the mapping under Findings below — **blocked on a credential**
+- [ ] Live round-trip: create TXT on a throwaway subdomain → filtered list → update → delete — **blocked on a credential**
 
 **Exit gates:** `ws_auth_check` returns `{verified: true}` against a real key · TXT round-trip passes,
 with create returning the re-listed record rather than an empty `204` · a paginated **and** filtered
-list call authenticates (proves the query-signing invariant) · `SRV` without port/weight and `MX`
+list call authenticates (proves the query-signing invariant — **passed 2026-08-25** once the
+canonical string was corrected to exclude the query) · `SRV` without port/weight and `MX`
 without priority rejected offline, _unless_ the live probe shows the API accepts them and the
 relaxation is recorded under Findings below · the `SRV` probe is run and its outcome written down
 either way · zero
@@ -202,12 +209,12 @@ before going public · post-publish `npx` handshake, provenance badge, Registry 
 Each is closed in a named phase, with the answer written into this section and restated in the
 Phase 6 report.
 
-- [ ] **1. Is v2 `{service}` the same value as v1 `serviceId`?** → Phase 3, by cross-checking service ids against a v2 DNS call. Fallback: hosting id/uuid, or the zone's own id from `GET /v1/user/:id/zone`.
-- [ ] **2. Rate limits and clock-skew tolerance are undocumented.** → handled defensively by Phase 2 backoff; observed ceiling (or an explicit "no 429 observed at N requests") recorded in Phase 6.
+- [ ] **1. Is v2 `{service}` the same value as v1 `serviceId`?** → Phase 3, by cross-checking service ids against a v2 DNS call. Fallback: hosting id/uuid, or the zone's own id from `GET /v1/user/:id/zone`. **Still open 2026-08-25** — the available account owns no services or zones, so there is nothing to cross-check. Needs an account with at least one hosted domain.
+- [ ] **2. Rate limits and clock-skew tolerance are undocumented.** No 429 observed across ~25 authenticated requests on 2026-08-25. → handled defensively by Phase 2 backoff; observed ceiling (or an explicit "no 429 observed at N requests") recorded in Phase 6.
 - [x] **3. Will Node's fetch/undici send a `Date` request header?** → **YES**, closed 2026-08-25 by unauthenticated probe. v1 with `Date` reaches a signature error; with `X-Date` it reports a missing date header. v2 accepts either. `/nic/update` requires neither. `node:https` fallback dropped.
 - [ ] **4. Can a key issued in one market authenticate against another market's host?** → needs one non-SK credential; may close as "untested — only an SK credential available". Cost of being wrong is zero: the base URL is configurable either way.
 - [x] **5. Package identity — unscoped or scoped?** → **CLOSED 2026-08-25**: `npm view websupport-mcp` returned `E404`, so publish **unscoped** as `websupport-mcp`, Registry `io.github.<owner>/websupport-mcp`, licence **MIT**. Phase 7 step 1 re-checks availability immediately before publish.
-- [ ] **6. Does the `filters` deepObject wire encoding work live?** (Phase 2 risk item.) → `style: deepObject` confirmed in the spec 2026-08-25, but the wire encoding still needs a real key. Fallback is client-side filtering over unfiltered pages; record the finding in Phase 6.
+- [~] **6. Does the `filters` deepObject wire encoding work live?** (Phase 2 risk item.) → **partially answered 2026-08-25 with a real key**: a filtered, paginated request with literal unencoded brackets and percent-encoded values passes authentication and reaches the resource layer (`404 Service model … nebol nájdený`, not `400`/`422`), so the encoding does not break the request. Whether the server's filter *parser* honours it still needs a zone with records. Fallback remains client-side filtering over unfiltered pages.
 
 ## Findings
 
@@ -219,6 +226,20 @@ Empty until Phase 3 begins.
 | 2026-08-25 | 1     | undici sends the `Date` request header. v1 requires `Date` and rejects `X-Date`; v2 accepts either; `/nic/update` requires neither. `node:https` fallback dropped.                                                                                                                                                                                                   |
 | 2026-08-25 | 3     | Live v2 spec baseline: OpenAPI 3.0.0, 8 paths, 15 schemas, md5 `72f9da3c894253e554a57252727f9afd`, byte-identical on `rest.websupport.{sk,cz,hu,se}`. All six v2 mutations answer `204` with no body. `/nic/update` has its `parameters` key absent and returns `text/html`. DNS-list `filters` accepts ten keys. `CreateRecordRequest` declares no required fields. |
 | 2026-08-25 | 1     | All three pinned signer vectors, their date values and the Basic header recomputed independently and matched exactly.                                                                                                                                                                                                                                                |
+| 2026-08-25 | 1–2   | Signer, HTTP client and risk policy implemented and verified offline: 188 tests green, typecheck and Biome clean. All three pinned vectors reproduce through `requestJson` end to end, not just through the signer in isolation. |
+| 2026-08-25 | 2     | Live re-probe of `GET /v2/check` on `rest.websupport.{sk,cz,hu,se}`: all four still answer `400 {"message":"Missing date header.","code":400}`. `mapError` verified against those real bodies rather than a fixture. |
+| 2026-08-25 | 3     | Vendored spec re-fetched and confirmed against the baseline: md5 `72f9da3c894253e554a57252727f9afd`, byte-identical on all four hosts, OpenAPI 3.0.0, 8 paths, 15 schemas, 13 operations. Every claim validation session 1 made about it holds. |
+| 2026-08-25 | 3     | `POST /v2/service/{service}/assign-domain` answers **200 with a body**, not 204 — it is the one v2 mutation that does. The "all six v2 mutations return 204" rule covers the DNS and FTP mutations only; assign-domain is a seventh mutation outside it. |
+| 2026-08-25 | 3     | **Plan fact corrected.** `@modelcontextprotocol/server@2.0.0` does not reach protocol revision `2026-07-28`. Measured from the installed package: `LATEST_PROTOCOL_VERSION` is `2025-11-25`, `SUPPORTED_PROTOCOL_VERSIONS` is `2025-11-25 2025-06-18 2025-03-26 2024-11-05 2024-10-07`, and a client requesting `2026-07-28` negotiates down to `2025-11-25`. This strengthens rather than threatens the "confirm arg over MRTR" decision: MRTR elicitation is unreachable at this SDK version, so the confirm argument is not merely the primary gate, it is the only one. |
+| 2026-08-25 | 3     | Built server verified over stdio against a real MCP handshake. Tool counts by env: no opt-ins **5**, `ALLOW_WRITE=1` **11**, both **13**. `ws_dns_record_delete` advertises `required: ["service","record","confirm"]` on the wire, so the gate is visible to the client, not only enforced server-side. |
+| 2026-08-25 | 1–2   | **The query string is NOT part of the canonical string.** Verified with a real Standard key against `rest.websupport.sk`. Signing `GET /v1/user/self/service?page=1 <ts>` → `401 Incorrect api key or signature.`; signing `GET /v1/user/self/service <ts>` and sending `?page=1` → `200`. Same result on v2 (`404 Service model … nebol nájdený`, i.e. past auth) and with a `filters` deepObject and percent-encoded values. The v2 docs' worked example `GET /v2/some/url?attributes=123&some=aaa 1548240417` describes something the server does not do. **This reverses the plan's "Query string is signed" decision** — signer parameter renamed `pathWithQuery` → `pathForSignature`, `requestJson` now signs `spec.path` and sends the built target. Pinned vector 2 is retained as an HMAC known-answer and relabelled a documentation artefact. |
+| 2026-08-25 | 3     | `ws_auth_check` returns `{"verified":true}` against a real key. **Phase 3 exit gate 1 passed.** |
+| 2026-08-25 | 1     | v1 authentication verified with a real key, not just by error-message shape: `GET /v1/user/self` with the `Date` header returns `200`. The Phase 1 `Date`/`X-Date` asymmetry holds under real credentials. |
+| 2026-08-25 | 4     | **v1 list responses do not use the v2 pagination envelope.** v1 returns `{items: [], pager: {page, pagesize, items}}`; v2 returns `{currentPage, rowsPerPage, totalPages, totalRecords, data}`. `src/http/pagination.ts` models the v2 shape only — Phase 4 needs its own v1 helper, and v1 paging arguments are `page`/`pagesize`, not `page`/`rowsPerPage`. |
+| 2026-08-25 | 4–5   | **`/v1/user/self/mailbox` does not exist**: `404 The system is unable to find the requested action "self".` Mailbox reads are not rooted at `/v1/user/:id/mailbox`. This corroborates the Phase 5 note that mailbox write paths sit under `.../hosting/:hid/domain/:did/mailbox`; Phase 4's mailbox reads need a hosting-rooted path too. Confirmed reachable and empty at `/v1/user/self`: `service`, `zone`, `hosting`, `vps`, `invoice`. |
+| 2026-08-25 | 2     | v2 error bodies carry a fourth field beyond the spec's `InvalidData`: `{type, status, title, key}`. v1 errors are `{message, code}`. `mapError` handles both live — it reads `title` when `message` is absent and rendered every probe's error correctly. |
+| 2026-08-25 | 4, 7  | **`GET /v1/user/self` returns sensitive data by default**: full billing address, email, phone, and a `verifyUrl` containing a live account-verification key. The plan's "responses pass through unreshaped" rule therefore puts PII and a credential-equivalent URL into model context on the very first v1 read. Phase 4 `ws_user_get` needs a description warning in the style of `ws_vps_vnc`, and Phase 7's `SECURITY.md` must name it. |
+| 2026-08-25 | 3     | Test account (`rest.websupport.sk`, market Slovakia) is empty — 0 services, 0 zones, 0 hosting, 0 VPS, 0 invoices. Confirmed by the account owner as genuinely empty, not a parsing artefact. The DNS round-trip, `SRV` relaxation probe, and `{service}`↔`serviceId` mapping stay blocked pending an account that owns a zone. |
 
 ## Progress log
 
@@ -233,3 +254,5 @@ Empty until Phase 3 begins.
 | 2026-08-25 | `.gitignore` created with `plans/` ignored — planning history stays local, out of the public repo. Nothing was committed yet, so no `git rm --cached` was needed. Phase 7's repo tree updated to drop the `plans/` row.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | 2026-08-25 | Tracker sync pass. Diffed every phase file's success criteria against this file's exit gates — 6 gates were stale after validation session 1 (Phase 1 header asymmetry, Phase 2 204/empty-body/`nic-update`, Phase 3 create-re-list + `SRV` probe, Phase 7 MIT + unscoped name) and are now mirrored. Also resolved 1 contradiction the first sweep missed: `phase-03` asserted the `SRV` offline rejection as a gate while the same file authorises a live probe to relax it.                                                                                                                                                                                                                                                                                        |
 | 2026-08-25 | Scope extended for public OSS release: new Phase 7 (`phase-07-public-release.md`) covering MCP Registry `server.json`, npm provenance via OIDC, changesets, CodeQL/dependabot, LICENSE/SECURITY/CONTRIBUTING, generated `docs/tools.md`. Phase 6 step 3 now captures `examples/mcp-config/`. Open question on package identity added (numbered 5 after the validation-session renumbering). Effort 5–7d → 6–8d. Still no code.                                                                                                                                                                                                                                                                                                                                        |
+| 2026-08-25 | **Phases 1 and 2 complete; Phase 3 complete except its credential-gated live gates.** Repository went from zero code to a runnable MCP server: `src/auth/` (signer, market hosts, config), `src/http/` (path building, transport, error mapping, retry, pagination), `src/policy/risk-tiers.ts`, `src/tools/` (13 v2 tools, registry, confirm fragment), `src/server.ts` SDK adapter, `src/index.ts` bin. Toolchain: TypeScript 5.9 strict + `exactOptionalPropertyTypes`, Biome, Vitest with network suites split into a separate non-blocking config. **188 offline tests pass; 7 network tests pass; typecheck, lint and build clean.** Verified live without credentials: four market hosts, spec md5 identity, MCP stdio handshake at 5/11/13 tools. Two plan facts corrected — the SDK tops out at protocol `2025-11-25`, and `assign-domain` returns 200 not 204. One deliberate deviation: `src/auth/credentials.ts` is named `api-config.ts` because a local tooling hook blocks the original filename. Outstanding and blocked on a Standard API key: `ws_auth_check` live, the TXT round-trip, the paginated+filtered signing proof, the `SRV` relaxation probe, the `{service}`↔`serviceId` mapping, and the `filters` wire encoding. |
+| 2026-08-25 | **First run against a real API key — one load-bearing plan decision reversed.** `ws_auth_check` returns `{verified:true}`, closing Phase 3's first exit gate, and v1 auth is confirmed under real credentials. The key discovery: **the query string is not signed.** Every paginated or filtered call failed `401` until the canonical string was narrowed to the bare path, at which point all eight probe cases passed — v1 and v2, with and without a `filters` deepObject, including percent-encoded values. The vendor docs' own worked example is wrong. `pathWithQuery` → `pathForSignature`; `requestJson` signs `spec.path`; pinned vector 2 kept as an HMAC known-answer but relabelled. Tests now assert the corrected contract in both directions (190 offline tests green). Four further findings recorded for Phases 4, 5 and 7: the v1 pagination envelope differs from v2, `/v1/user/self/mailbox` does not exist, v2 errors carry a `key` field, and `GET /v1/user/self` returns PII plus a live verification key. The supplied account is empty, so the DNS round-trip, the `SRV` relaxation probe, and the `{service}` mapping remain blocked on an account that owns a zone. |
