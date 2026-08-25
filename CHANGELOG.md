@@ -1,5 +1,13 @@
 # websupport-mcp
 
+## 0.1.1
+
+### Patch Changes
+
+- [`a3d36ec`](https://github.com/tydung26/websupport-mcp/commit/a3d36ece7cd38a38c060623c8f234c0f7e91a1e5) Thanks [@tydung26](https://github.com/tydung26)! - Report the actual package version in `serverInfo`. 0.1.0 announced itself to MCP clients as
+  `0.0.0` because the constant was hardcoded; it is now read from `package.json`, and a test asserts
+  the two agree.
+
 ## 0.1.0
 
 ### Minor Changes
