@@ -2,10 +2,7 @@
   "mcpServers": {
     "websupport": {
       "command": "npx",
-      "args": [
-        "-y",
-        "websupport-mcp"
-      ],
+      "args": ["-y", "websupport-mcp"],
       "env": {
         "WEBSUPPORT_API_KEY": "",
         "WEBSUPPORT_API_SECRET": "",
