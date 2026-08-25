@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Nothing here publishes on its own. Changesets opens a "Version Packages" pull
+# request that collects pending changesets into a version bump and changelog;
+# publishing happens only when a human merges that pull request. Until then this
+# workflow just keeps the release PR up to date.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  NPM_VERSION: '11'
+
+jobs:
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the version bump commit and the release PR
+      pull-requests: write # open and update that PR
+      id-token: write # mint the OIDC token npm provenance is signed with
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Changesets needs history to work out what has already been released.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: Upgrade npm
+        # npm 10 cannot resolve the bundler's dependency tree, and provenance
+        # requires a recent npm regardless.
+        run: npm install -g npm@${{ env.NPM_VERSION }}
+
+      - run: npm ci
+
+      # The published artifact is built and checked here rather than trusted:
+      # a release must not be the first time these run.
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Changesets — open a release PR, or publish a merged one
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: npm run release:version
+          publish: npm run release:publish
+          title: 'chore: release'
+          commit: 'chore: release'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # The only long-lived secret. Provenance itself is signed with the
+          # OIDC token above, not with this.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'
+
+      - name: Report
+        if: always()
+        run: |
+          echo "published: ${{ steps.changesets.outputs.published }}"
+          echo "pull request: ${{ steps.changesets.outputs.pullRequestNumber }}"
