@@ -98,6 +98,9 @@ waiting for a release.
 | --- | --- |
 | [`docs/tools.md`](docs/tools.md) | Every tool: tier, method + path, confirm requirement. Generated from the registry — never hand-edited. |
 | [`docs/verification-matrix.md`](docs/verification-matrix.md) | What has actually been proven about each tool, and what has not. Read this before trusting any tool in production. |
+| [`docs/system-architecture.md`](docs/system-architecture.md) | The request path, the signing contract and its three counter-intuitive rules, and how the tier model works. |
+| [`docs/codebase-summary.md`](docs/codebase-summary.md) | Module map — what lives where and why. |
+| [`examples/mcp-config/`](examples/mcp-config/) | Ready-to-edit client configurations for each tier combination. |
 
 ## Scope
 
