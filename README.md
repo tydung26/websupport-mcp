@@ -92,6 +92,13 @@ so switching markets is configuration, never a code change.
 An unrecognised host warns to stderr and is used anyway, so a newly added market works without
 waiting for a release.
 
+## Documentation
+
+| Document | What it holds |
+| --- | --- |
+| [`docs/tools.md`](docs/tools.md) | Every tool: tier, method + path, confirm requirement. Generated from the registry — never hand-edited. |
+| [`docs/verification-matrix.md`](docs/verification-matrix.md) | What has actually been proven about each tool, and what has not. Read this before trusting any tool in production. |
+
 ## Scope
 
 Order creation and invoice/order payment endpoints are deliberately out of scope and are asserted

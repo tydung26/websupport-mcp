@@ -112,6 +112,16 @@ jobs:
             }})
           "
 
+      - name: Generated tool list is current
+        # A hand-maintained table of fifty tools goes stale in one release and
+        # then lies about what is installed. Regenerating must be a no-op.
+        run: |
+          npm run docs:tools
+          git diff --exit-code -- docs/tools.md || {
+            echo '::error::docs/tools.md is stale — run `npm run docs:tools` and commit the result.'
+            exit 1
+          }
+
       - name: Package contents
         # Proves the tarball is the bundle and nothing else: no environment
         # files, no sources, no tests, and exactly one entrypoint. The OpenAPI
