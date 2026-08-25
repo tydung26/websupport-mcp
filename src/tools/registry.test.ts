@@ -89,34 +89,68 @@ describe('confirm gate', () => {
   })
 })
 
-describe('phase 3 tool surface', () => {
-  it('registers exactly the 13 v2 tools', () => {
-    expect(registry.map((t) => t.name)).toEqual([
-      'ws_auth_check',
-      'ws_dns_zone_get',
-      'ws_dns_record_list',
-      'ws_dns_record_create',
-      'ws_dns_record_update',
-      'ws_dns_record_delete',
-      'ws_ftp_account_list',
-      'ws_ftp_account_get',
-      'ws_ftp_account_create',
-      'ws_ftp_account_update',
-      'ws_ftp_account_delete',
-      'ws_domain_assign',
-      'ws_dyndns_update',
-    ])
+describe('tool surface', () => {
+  const V2 = [
+    'ws_auth_check',
+    'ws_dns_zone_get',
+    'ws_dns_record_list',
+    'ws_dns_record_create',
+    'ws_dns_record_update',
+    'ws_dns_record_delete',
+    'ws_ftp_account_list',
+    'ws_ftp_account_get',
+    'ws_ftp_account_create',
+    'ws_ftp_account_update',
+    'ws_ftp_account_delete',
+    'ws_domain_assign',
+    'ws_dyndns_update',
+  ]
+
+  const V1_READ = [
+    'ws_user_get',
+    'ws_service_list',
+    'ws_service_get',
+    'ws_zone_list',
+    'ws_zone_get',
+    'ws_hosting_list',
+    'ws_hosting_get',
+    'ws_hosting_vhost_list',
+    'ws_hosting_vhost_get',
+    'ws_hosting_stats',
+    'ws_db_list',
+    'ws_db_get',
+    'ws_db_users_list',
+    'ws_db_stats',
+    'ws_mailbox_list',
+    'ws_mailbox_get',
+    'ws_mail_stats',
+    'ws_vps_list',
+    'ws_vps_get',
+    'ws_vps_stats',
+    'ws_vps_vnc',
+    'ws_invoice_list',
+    'ws_invoice_get',
+    'ws_invoice_pdf',
+  ]
+
+  it('registers the 13 v2 tools and the 24 v1 read tools', () => {
+    expect(registry.map((t) => t.name)).toEqual([...V2, ...V1_READ])
   })
 
-  it('exposes exactly 5 read tools with no env opt-ins', () => {
-    const visible = allowedTools(registry, resolveTierPolicy({})).map((t) => t.name)
-    expect(visible).toEqual([
-      'ws_auth_check',
-      'ws_dns_zone_get',
-      'ws_dns_record_list',
-      'ws_ftp_account_list',
-      'ws_ftp_account_get',
-    ])
+  it('makes every v1 read tool tier read', () => {
+    for (const name of V1_READ) {
+      expect(registry.find((t) => t.name === name)?.tier, name).toBe('read')
+    }
+  })
+
+  it('shows every read tool, and only read tools, with no env opt-ins', () => {
+    const visible = allowedTools(registry, resolveTierPolicy({}))
+    expect(visible.every((t) => t.tier === 'read')).toBe(true)
+    // The 5 v2 reads plus all 24 v1 reads.
+    expect(visible).toHaveLength(29)
+    for (const name of V1_READ) {
+      expect(visible.map((t) => t.name)).toContain(name)
+    }
   })
 
   it('adds write tools only with ALLOW_WRITE, destructive only with ALLOW_DESTRUCTIVE', () => {
