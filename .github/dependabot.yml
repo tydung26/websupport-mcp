@@ -6,6 +6,13 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # @types/node tracks the *minimum* supported runtime, not the newest.
+      # engines.node is >=22, so typing against a later major would let code
+      # typecheck here and fail at runtime for anyone on the supported floor.
+      # Raise this deliberately when the engines floor itself moves.
+      - dependency-name: '@types/node'
+        update-types: [version-update:semver-major]
     groups:
       # Patch and minor bumps arrive as one PR rather than five; majors stay
       # separate so each gets read on its own.
