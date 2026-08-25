@@ -11,8 +11,11 @@ import { fileURLToPath } from 'node:url'
  * `release:version`, before the release commit is made.
  *
  * Re-serialising the document does not reproduce Biome's formatting — short
- * arrays get expanded onto separate lines — so `release:version` runs
- * `biome format --write` afterwards. Do not try to match the formatter by hand
+ * arrays get expanded onto separate lines — so `release:version` formats this
+ * file, and only this file, immediately afterwards. Formatting the whole tree
+ * instead reflows unrelated markdown, which `biome check` never flags because
+ * it ignores markdown, so the churn would land in every release commit
+ * unnoticed. Do not try to match the formatter by hand
  * here; it will drift and fail the lint gate on a release pull request, which
  * is exactly how this was found.
  */
