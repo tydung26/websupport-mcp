@@ -4,9 +4,9 @@ An MCP server (TypeScript, ESM, stdio) wrapping the [Websupport](https://www.web
 API v1 + v2 — DNS, FTP, hosting, databases, mailboxes, VPS and invoices — exposed as MCP tools with
 signed HMAC-SHA1 authentication.
 
-**Status: in development.** The v2 surface (13 tools) and the v1 read surface (24 tools) are
-implemented and run; the 13 v1 mutating tools are not written yet. See [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) for the phase
-breakdown and current progress.
+**Status: in development.** All 50 tools are implemented and the server runs. What remains is
+verification against an account that owns real resources, packaging, and release. See
+[`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) for progress.
 
 ## Risk tiers
 
@@ -16,9 +16,14 @@ affordance.
 
 | Tier | Opt-in | Extra per-call gate | Currently |
 | --- | --- | --- | --- |
-| `read` | always on | — | 29 tools |
-| `write` | `WEBSUPPORT_ALLOW_WRITE=1` | — | 6 tools |
-| `destructive` | `WEBSUPPORT_ALLOW_DESTRUCTIVE=1` | `confirm: true` argument | 2 tools |
+| `read` | always on | — | 30 tools |
+| `write` | `WEBSUPPORT_ALLOW_WRITE=1` | — | 13 tools |
+| `destructive` | `WEBSUPPORT_ALLOW_DESTRUCTIVE=1` | `confirm: true` argument | 7 tools |
+
+A tool is `destructive` when it destroys state you cannot cheaply recreate — not merely because it
+writes. A graceful VPS reboot is `write`; a hard power-cycle is `destructive`, because it can
+corrupt in-flight writes. Taking a snapshot is `write`; restoring one is `destructive`, because it
+discards everything since.
 
 The two opt-ins are independent: `WEBSUPPORT_ALLOW_DESTRUCTIVE=1` alone does **not** unlock write
 tools, and vice versa.
