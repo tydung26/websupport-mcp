@@ -1,10 +1,14 @@
 import type { AnyToolDef } from './types.js'
 import { accountTools } from './v1/account-tools.js'
 import { databaseTools } from './v1/database-tools.js'
+import { databaseWriteTools } from './v1/database-write-tools.js'
 import { hostingTools } from './v1/hosting-tools.js'
 import { invoiceTools } from './v1/invoice-tools.js'
 import { mailboxTools } from './v1/mailbox-tools.js'
+import { mailboxWriteTools } from './v1/mailbox-write-tools.js'
+import { serviceWriteTools } from './v1/service-write-tools.js'
 import { vpsTools } from './v1/vps-tools.js'
+import { vpsWriteTools } from './v1/vps-write-tools.js'
 import { dnsTools } from './v2/dns-tools.js'
 import { domainAndDyndnsTools } from './v2/domain-and-dyndns-tools.js'
 import { ftpTools } from './v2/ftp-tools.js'
@@ -29,6 +33,10 @@ export const registry: AnyToolDef[] = [
   ...mailboxTools,
   ...vpsTools,
   ...invoiceTools,
+  ...databaseWriteTools,
+  ...mailboxWriteTools,
+  ...vpsWriteTools,
+  ...serviceWriteTools,
 ]
 
 export function toolByName(name: string): AnyToolDef | undefined {

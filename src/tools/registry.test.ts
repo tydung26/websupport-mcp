@@ -133,8 +133,47 @@ describe('tool surface', () => {
     'ws_invoice_pdf',
   ]
 
-  it('registers the 13 v2 tools and the 24 v1 read tools', () => {
-    expect(registry.map((t) => t.name)).toEqual([...V2, ...V1_READ])
+  const V1_WRITE = [
+    'ws_db_create',
+    'ws_db_update',
+    'ws_db_delete',
+    'ws_mailbox_create',
+    'ws_mailbox_update',
+    'ws_mailbox_delete',
+    'ws_vps_reboot',
+    'ws_vps_hard_reboot',
+    'ws_vps_snapshot_list',
+    'ws_vps_snapshot_create',
+    'ws_vps_snapshot_restore',
+    'ws_vps_snapshot_delete',
+    'ws_service_set_auto_extend',
+  ]
+
+  it('registers all 50 tools: 13 v2, 24 v1 read, 13 v1 mutating', () => {
+    expect(registry).toHaveLength(50)
+    expect(registry.map((t) => t.name)).toEqual([...V2, ...V1_READ, ...V1_WRITE])
+  })
+
+  it('splits the tiers 30 read / 13 write / 7 destructive', () => {
+    const count = (tier: string) => registry.filter((t) => t.tier === tier).length
+    expect({
+      read: count('read'),
+      write: count('write'),
+      destructive: count('destructive'),
+    }).toEqual({ read: 30, write: 13, destructive: 7 })
+  })
+
+  it('tiers the VPS operations by what they destroy, not by whether they write', () => {
+    const tierOf = (name: string) => registry.find((t) => t.name === name)?.tier
+    // Graceful reboot is recoverable; a hard power-cycle can corrupt in-flight writes.
+    expect(tierOf('ws_vps_reboot')).toBe('write')
+    expect(tierOf('ws_vps_hard_reboot')).toBe('destructive')
+    // Taking a snapshot is additive; restoring one discards everything since.
+    expect(tierOf('ws_vps_snapshot_create')).toBe('write')
+    expect(tierOf('ws_vps_snapshot_restore')).toBe('destructive')
+    expect(tierOf('ws_vps_snapshot_delete')).toBe('destructive')
+    // Listing snapshots stays readable in a read-only deployment.
+    expect(tierOf('ws_vps_snapshot_list')).toBe('read')
   })
 
   it('makes every v1 read tool tier read', () => {
@@ -146,8 +185,9 @@ describe('tool surface', () => {
   it('shows every read tool, and only read tools, with no env opt-ins', () => {
     const visible = allowedTools(registry, resolveTierPolicy({}))
     expect(visible.every((t) => t.tier === 'read')).toBe(true)
-    // The 5 v2 reads plus all 24 v1 reads.
-    expect(visible).toHaveLength(29)
+    // 5 v2 reads, 24 v1 reads, plus ws_vps_snapshot_list.
+    expect(visible).toHaveLength(30)
+    expect(visible.map((t) => t.name)).toContain('ws_vps_snapshot_list')
     for (const name of V1_READ) {
       expect(visible.map((t) => t.name)).toContain(name)
     }
