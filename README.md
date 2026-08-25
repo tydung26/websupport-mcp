@@ -43,6 +43,8 @@ npm run build
 
 Then point an MCP client at it:
 
+Requires Node >= 22.
+
 ```jsonc
 {
   "mcpServers": {
@@ -110,17 +112,13 @@ Network suites are separated deliberately: a Websupport outage must not fail the
 
 ### Toolchain
 
-Running the server needs **Node >= 20**. *Building* it needs more, because the bundler does:
+**Node >= 22**, to run or to build. Node 20 reached end of life on 2026-04-30 and is not
+supported. CI covers the two live LTS lines, 22 and 24, and builds and smoke-tests the bundle on
+each.
 
-| | Requirement |
-| --- | --- |
-| Run the published package | Node >= 20 |
-| Build from source | Node ^22.18 \|\| >= 24.11, and npm >= 11 |
-
-tsdown sets that floor, and npm 10 cannot resolve its dependency tree at all — it fails with an
-unhelpful `Cannot read properties of null (reading 'edgesOut')`. If you hit that, upgrade npm
-rather than debugging the repository. CI keeps the two floors apart: tests run on Node 20 and 22,
-the bundle is built on 22.
+Building also needs **npm >= 11**: npm 10 cannot resolve the bundler's dependency tree and fails
+with an unhelpful `Cannot read properties of null (reading 'edgesOut')`. If you hit that, upgrade
+npm rather than debugging the repository.
 
 ## Licence
 
