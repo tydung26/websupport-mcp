@@ -23,11 +23,30 @@ const pkg = read('../../package.json') as {
   mcpName?: string
   bin?: Record<string, string>
 }
+interface EnvVar {
+  name: string
+  isRequired?: boolean
+  isSecret?: boolean
+}
+
+interface ServerPackage {
+  registryType: string
+  identifier: string
+  version?: string
+  transport?: { type: string }
+  environmentVariables?: EnvVar[]
+}
+
 const server = read('../../server.json') as {
   name: string
   version: string
-  packages?: { registryType: string; identifier: string; version?: string }[]
+  packages?: ServerPackage[]
 }
+
+const npmPackage = (): ServerPackage | undefined =>
+  server.packages?.find((p) => p.registryType === 'npm')
+
+const environmentVariables = (): EnvVar[] => npmPackage()?.environmentVariables ?? []
 
 describe('server.json agrees with package.json', () => {
   it('advertises the same version', () => {
@@ -35,9 +54,8 @@ describe('server.json agrees with package.json', () => {
   })
 
   it('names the npm package that actually gets published', () => {
-    const npm = server.packages?.find((p) => p.registryType === 'npm')
-    expect(npm?.identifier).toBe(pkg.name)
-    expect(npm?.version).toBe(pkg.version)
+    expect(npmPackage()?.identifier).toBe(pkg.name)
+    expect(npmPackage()?.version).toBe(pkg.version)
   })
 
   it('matches the mcpName declared in the manifest', () => {
@@ -51,19 +69,10 @@ describe('server.json agrees with package.json', () => {
   })
 
   it('declares a stdio transport, which is what this server speaks', () => {
-    const npm = server.packages?.find((p) => p.registryType === 'npm') as
-      | { transport?: { type: string } }
-      | undefined
-    expect(npm?.transport?.type).toBe('stdio')
+    expect(npmPackage()?.transport?.type).toBe('stdio')
   })
 
   it('documents every environment variable the server reads', () => {
-    const declared = new Set(
-      (
-        (server.packages?.[0] as { environmentVariables?: { name: string }[] })
-          ?.environmentVariables ?? []
-      ).map((v) => v.name),
-    )
     for (const name of [
       'WEBSUPPORT_API_KEY',
       'WEBSUPPORT_API_SECRET',
@@ -72,18 +81,17 @@ describe('server.json agrees with package.json', () => {
       'WEBSUPPORT_ALLOW_WRITE',
       'WEBSUPPORT_ALLOW_DESTRUCTIVE',
     ]) {
-      expect(declared, `server.json does not document ${name}`).toContain(name)
+      expect(
+        environmentVariables().map((v) => v.name),
+        `server.json does not document ${name}`,
+      ).toContain(name)
     }
   })
 
   it('marks the secret as secret and the key as not', () => {
-    const vars = (
-      server.packages?.[0] as {
-        environmentVariables?: { name: string; isSecret?: boolean }[]
-      }
-    ).environmentVariables
-    expect(vars?.find((v) => v.name === 'WEBSUPPORT_API_SECRET')?.isSecret).toBe(true)
-    expect(vars?.find((v) => v.name === 'WEBSUPPORT_API_KEY')?.isSecret).toBe(false)
+    const byName = (name: string) => environmentVariables().find((v) => v.name === name)
+    expect(byName('WEBSUPPORT_API_SECRET')?.isSecret).toBe(true)
+    expect(byName('WEBSUPPORT_API_KEY')?.isSecret).toBe(false)
   })
 })
 
