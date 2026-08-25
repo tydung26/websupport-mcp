@@ -22,7 +22,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:network": "vitest run --config vitest.network.config.ts",
-    "docs:tools": "vite-node scripts/generate-tools-doc.ts"
+    "docs:tools": "vite-node scripts/generate-tools-doc.ts",
+    "release:version": "changeset version && vite-node scripts/sync-server-json-version.ts && npm install --package-lock-only && npm run docs:tools",
+    "release:publish": "npm run build && changeset publish",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "mcp",
@@ -37,10 +40,24 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.10",
+    "@changesets/changelog-github": "^1.0.0",
+    "@changesets/cli": "^3.0.1",
     "@types/node": "^22",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
     "tsdown": "^0.22.14",
     "typescript": "^7.0.2",
     "vite-node": "^6.0.0",
     "vitest": "^4.1.11"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tydung26/websupport-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tydung26/websupport-mcp/issues"
+  },
+  "homepage": "https://github.com/tydung26/websupport-mcp#readme",
+  "author": "Joseph Dung",
+  "mcpName": "io.github.tydung26/websupport-mcp"
 }
