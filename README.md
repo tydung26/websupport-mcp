@@ -4,9 +4,13 @@ An MCP server (TypeScript, ESM, stdio) wrapping the [Websupport](https://www.web
 API v1 + v2 — DNS, FTP, hosting, databases, mailboxes, VPS and invoices — exposed as MCP tools with
 signed HMAC-SHA1 authentication.
 
-**Status: in development.** All 50 tools are implemented and the server runs. What remains is
-verification against an account that owns real resources, packaging, and release. See
-[`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) for progress.
+[![npm](https://img.shields.io/npm/v/websupport-mcp)](https://www.npmjs.com/package/websupport-mcp)
+[![licence: MIT](https://img.shields.io/badge/licence-MIT-blue)](LICENSE)
+
+**Status: early.** All 50 tools are implemented and published, but most have been verified only as
+far as reaching the API — routes, signing and error handling are proven; response shapes largely are
+not. Read [`docs/verification-matrix.md`](docs/verification-matrix.md) before relying on any tool,
+and see [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) for progress.
 
 ## Risk tiers
 
@@ -34,23 +38,16 @@ settle well below the revision that supports elicitation — this server's SDK c
 
 ## Install
 
-Not yet published. To run from a local checkout:
+Requires **Node >= 22**. Nothing to install ahead of time — `npx` fetches the package on first run.
 
-```bash
-npm install
-npm run build
-```
-
-Then point an MCP client at it:
-
-Requires Node >= 22.
+Add this to your MCP client's configuration:
 
 ```jsonc
 {
   "mcpServers": {
     "websupport": {
-      "command": "node",
-      "args": ["/absolute/path/to/websupport-mcp/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "websupport-mcp"],
       "env": {
         "WEBSUPPORT_API_KEY": "…",
         "WEBSUPPORT_API_SECRET": "…"
@@ -59,6 +56,38 @@ Requires Node >= 22.
   }
 }
 ```
+
+That gives you the 30 read-only tools. Nothing in that configuration can change your account.
+
+To allow changes, add only the opt-ins you need — see [Risk tiers](#risk-tiers) above:
+
+```jsonc
+"env": {
+  "WEBSUPPORT_API_KEY": "…",
+  "WEBSUPPORT_API_SECRET": "…",
+  "WEBSUPPORT_ALLOW_WRITE": "1",
+  "WEBSUPPORT_ALLOW_DESTRUCTIVE": "1"
+}
+```
+
+Ready-made configurations for each combination live in
+[`examples/mcp-config/`](examples/mcp-config/). Pin a version with `websupport-mcp@0.1.1` in place
+of `websupport-mcp`.
+
+Once it is wired up, ask your client to run `ws_auth_check`. It returns `{"verified": true}` when
+the credentials work, which is the quickest way to separate a bad key from anything else.
+
+### From a local checkout
+
+For development, or to run unreleased changes:
+
+```bash
+npm install
+npm run build
+```
+
+Then point `command` at `node` and `args` at the built entrypoint
+(`<checkout>/dist/index.js`) instead of `npx`.
 
 ## Credentials
 
