@@ -44,27 +44,28 @@ jobs:
         run: npm run build
 
       - name: Package contents
-        # Proves the published tarball carries build output and the vendored
-        # spec, and nothing else — no .env, no sources, no test files.
+        # Proves the tarball is the bundle and nothing else: no environment
+        # files, no sources, no tests, and exactly one entrypoint. The OpenAPI
+        # spec is inlined at build time, so it must not ship separately either.
         run: |
           npm pack --dry-run --json > pack.json
           node --input-type=module -e "
             import { readFileSync } from 'node:fs'
             const files = JSON.parse(readFileSync('pack.json', 'utf8'))[0].files.map(f => f.path)
             const forbidden = files.filter(f =>
-              /(^|\/)\.env($|\.)/.test(f) || f.endsWith('.test.js') || f.endsWith('.test.ts') || f.startsWith('src/')
+              /(^|\/)\.env($|\.)/.test(f) || f.endsWith('.test.js') || f.endsWith('.test.ts') ||
+              f.startsWith('src/') || f.startsWith('assets/')
             )
             if (forbidden.length) {
               console.error('Tarball would ship files it must not:', forbidden)
               process.exit(1)
             }
-            for (const required of ['dist/index.js', 'assets/websupport-v2-openapi.json']) {
-              if (!files.includes(required)) {
-                console.error('Tarball is missing', required)
-                process.exit(1)
-              }
+            const js = files.filter(f => f.endsWith('.js'))
+            if (js.length !== 1 || js[0] !== 'dist/index.js') {
+              console.error('Expected exactly one bundled entrypoint, got:', js)
+              process.exit(1)
             }
-            console.error(\`tarball: \${files.length} files, no secrets, no sources\`)
+            console.error(\`tarball: \${files.length} files, single bundle, no secrets, no sources\`)
           "
 
   live-api:
