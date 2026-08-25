@@ -127,6 +127,17 @@ Building also needs **npm >= 11**: npm 10 cannot resolve the bundler's dependenc
 with an unhelpful `Cannot read properties of null (reading 'edgesOut')`. If you hit that, upgrade
 npm rather than debugging the repository.
 
+## Security
+
+The credentials this server holds grant full control of a Websupport account — there is no
+read-only API pair. [`SECURITY.md`](SECURITY.md) covers how they are handled, which tools return
+sensitive data, and how to report a vulnerability privately.
+
+## Contributing
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). Note two boundaries enforced by test rather than review:
+no order or payment endpoints, and every destructive tool must declare `confirm: true`.
+
 ## Licence
 
-MIT.
+MIT — see [`LICENSE`](LICENSE).
