@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "websupport": {
+      "command": "node",
+      "args": ["/absolute/path/to/websupport-mcp/dist/index.js"],
+      "env": {
+        "WEBSUPPORT_API_KEY": "",
+        "WEBSUPPORT_API_SECRET": "",
+        "WEBSUPPORT_ALLOW_WRITE": "1",
+        "WEBSUPPORT_ALLOW_DESTRUCTIVE": "1"
+      }
+    }
+  }
+}
