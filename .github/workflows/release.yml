@@ -40,9 +40,23 @@ jobs:
           registry-url: https://registry.npmjs.org
 
       - name: Upgrade npm
-        # npm 10 cannot resolve the bundler's dependency tree, and provenance
-        # requires a recent npm regardless.
+        # npm 10 cannot resolve the bundler's dependency tree, and trusted
+        # publishing needs >= 11.5.1.
         run: npm install -g npm@${{ env.NPM_VERSION }}
+
+      - name: Verify npm is new enough for trusted publishing
+        run: |
+          node --input-type=module -e "
+            import { execFileSync } from 'node:child_process'
+            const v = execFileSync('npm', ['-v'], { encoding: 'utf8' }).trim()
+            const [maj, min, patch] = v.split('.').map(Number)
+            const ok = maj > 11 || (maj === 11 && (min > 5 || (min === 5 && patch >= 1)))
+            if (!ok) {
+              console.error(\`trusted publishing needs npm >= 11.5.1, have \${v}\`)
+              process.exit(1)
+            }
+            console.error(\`npm \${v} supports trusted publishing\`)
+          "
 
       - run: npm ci
 
@@ -69,11 +83,16 @@ jobs:
           title: 'chore: release'
           commit: 'chore: release'
         env:
+          # No npm credential. Publishing authenticates through trusted
+          # publishing: the npm CLI detects the OIDC environment from the
+          # `id-token: write` permission above and uses it in preference to any
+          # token. Provenance attestations are generated automatically on that
+          # path, so `--provenance` is not passed either.
+          #
+          # Requires npm >= 11.5.1 and Node >= 22.14, both satisfied above, and
+          # a trusted publisher registered on npmjs.com for this repository and
+          # this workflow filename.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # The only long-lived secret. Provenance itself is signed with the
-          # OIDC token above, not with this.
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_CONFIG_PROVENANCE: 'true'
 
       - name: Report
         if: always()

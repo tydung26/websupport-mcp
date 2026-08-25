@@ -83,9 +83,9 @@ Nothing publishes automatically. The pipeline has a deliberate human gate in the
 2. **CI opens a release PR.** On merge to `main`, the release workflow collects pending changesets
    into a version bump, a changelog entry, a regenerated `docs/tools.md` and a synced
    `server.json`, and opens a "chore: release" pull request. Nothing is published at this point.
-3. **Merging that PR publishes.** Only then does `changeset publish` push to npm, with provenance
-   signed under GitHub OIDC. `NPM_TOKEN` is the only long-lived secret; the provenance attestation
-   itself uses the workflow's OIDC identity, not that token.
+3. **Merging that PR publishes.** Only then does `changeset publish` push to npm. Authentication is
+   npm trusted publishing — the workflow's OIDC identity, no token anywhere — and provenance is
+   generated automatically as a result. Nothing needs to be held in repository secrets.
 4. **Registry publish is separate and manual**, via `mcp-publisher login github` then
    `mcp-publisher publish`.
 

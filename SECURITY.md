@@ -83,8 +83,14 @@ reappears — the boundary is enforced structurally, not by review.
 
 ## Supply chain
 
-- Published from CI with npm provenance under GitHub OIDC. No long-lived publish token exists on a
-  developer machine.
+- Published from CI through npm **trusted publishing**: authentication is the workflow's own OIDC
+  identity, so **no npm credential exists at all** — not in the repository secrets, not on a
+  developer machine. Provenance attestations are generated automatically on that path.
+- npm is deprecating long-lived 2FA-bypass tokens: from around January 2027 they can no longer
+  publish directly. This project never created one.
+- Version `0.1.0` is the one exception and carries **no provenance attestation** — it was published
+  by hand before the package existed, which is a precondition for registering a trusted publisher.
+  Every later version is attested.
 - `npm pack` contents are asserted in CI: exactly one bundled entrypoint, and no `.env`, sources or
   tests.
 - Dependabot covers npm and GitHub Actions weekly; CodeQL runs on every push and pull request.
