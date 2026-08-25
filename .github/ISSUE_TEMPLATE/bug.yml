@@ -1,0 +1,91 @@
+name: Bug report
+description: Something behaves incorrectly.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Never paste your API key, secret, or a raw `ws_user_get` / `ws_vps_vnc` response.**
+        Those carry account credentials and personal data. Redact before posting.
+
+  - type: input
+    id: tool
+    attributes:
+      label: Tool
+      description: Which tool misbehaved, if it was one.
+      placeholder: ws_dns_record_create
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected, and what happened instead
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: The arguments you passed, with any identifiers redacted.
+    validations:
+      required: true
+
+  - type: textarea
+    id: error
+    attributes:
+      label: Error output
+      description: >
+        The tool result or stderr output. The server never logs the secret, but
+        check before pasting.
+      render: text
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: Package version
+      placeholder: 0.1.0
+    validations:
+      required: true
+
+  - type: input
+    id: node
+    attributes:
+      label: Node version
+      description: Output of `node -v`. Node 20 and below are unsupported.
+      placeholder: v22.22.3
+    validations:
+      required: true
+
+  - type: input
+    id: client
+    attributes:
+      label: MCP client
+      placeholder: Claude Code / Claude Desktop / other
+    validations:
+      required: false
+
+  - type: dropdown
+    id: market
+    attributes:
+      label: Market
+      description: Which API host, i.e. your WEBSUPPORT_API_BASE_URL.
+      options:
+        - rest.websupport.sk (default)
+        - rest.websupport.cz
+        - rest.websupport.hu
+        - rest.websupport.se
+        - other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: tiers
+    attributes:
+      label: Environment opt-ins that were set
+      options:
+        - label: WEBSUPPORT_ALLOW_WRITE=1
+        - label: WEBSUPPORT_ALLOW_DESTRUCTIVE=1

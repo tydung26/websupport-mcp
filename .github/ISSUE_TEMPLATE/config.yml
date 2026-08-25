@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/tydung26/websupport-mcp/security/advisories/new
+    about: Report privately through a security advisory, never as a public issue.
+  - name: Websupport API or account problem
+    url: https://www.websupport.sk/support
+    about: Faults in the API itself, or with your account, belong with Websupport.

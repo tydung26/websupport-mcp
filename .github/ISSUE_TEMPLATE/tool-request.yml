@@ -1,0 +1,50 @@
+name: Tool request
+description: Ask for a Websupport endpoint to be exposed as a tool.
+labels: [tool-request]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check [`docs/tools.md`](../blob/main/docs/tools.md) first — the list there is
+        generated from the registry and is always current.
+
+        **Out of scope permanently:** order creation and invoice/order payment. This
+        server must not be able to spend money, and a test enforces their absence.
+
+  - type: input
+    id: endpoint
+    attributes:
+      label: Endpoint
+      description: Method and path from the Websupport documentation.
+      placeholder: GET /v1/user/:id/something
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: What you would use it for
+      description: What task should an agent be able to complete that it cannot today?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: tier
+    attributes:
+      label: Which tier does it belong in?
+      description: >
+        Tier follows what an operation destroys, not whether it writes. Destructive
+        means state the user cannot cheaply recreate.
+      options:
+        - read — returns data, changes nothing
+        - write — creates or reversibly updates
+        - destructive — destroys data or forcibly interrupts service
+    validations:
+      required: true
+
+  - type: textarea
+    id: docs
+    attributes:
+      label: Link to the Websupport documentation for it
+    validations:
+      required: false
