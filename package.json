@@ -23,7 +23,7 @@
     "test:watch": "vitest",
     "test:network": "vitest run --config vitest.network.config.ts",
     "docs:tools": "vite-node scripts/generate-tools-doc.ts",
-    "release:version": "changeset version && vite-node scripts/sync-server-json-version.ts && npm install --package-lock-only && npm run docs:tools",
+    "release:version": "changeset version && vite-node scripts/sync-server-json-version.ts && npm install --package-lock-only && npm run docs:tools && biome format --write .",
     "release:publish": "npm run build && changeset publish",
     "prepublishOnly": "npm run build"
   },

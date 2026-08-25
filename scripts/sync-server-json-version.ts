@@ -9,6 +9,12 @@ import { fileURLToPath } from 'node:url'
  * Registry manifest. Left alone the two drift, and the Registry then advertises
  * a version that does not match the published package. Run as part of
  * `release:version`, before the release commit is made.
+ *
+ * Re-serialising the document does not reproduce Biome's formatting — short
+ * arrays get expanded onto separate lines — so `release:version` runs
+ * `biome format --write` afterwards. Do not try to match the formatter by hand
+ * here; it will drift and fail the lint gate on a release pull request, which
+ * is exactly how this was found.
  */
 
 const pkgPath = fileURLToPath(new URL('../package.json', import.meta.url))
