@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: check (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20', '22']
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test (offline)
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Package contents
+        # Proves the published tarball carries build output and the vendored
+        # spec, and nothing else — no .env, no sources, no test files.
+        run: |
+          npm pack --dry-run --json > pack.json
+          node --input-type=module -e "
+            import { readFileSync } from 'node:fs'
+            const files = JSON.parse(readFileSync('pack.json', 'utf8'))[0].files.map(f => f.path)
+            const forbidden = files.filter(f =>
+              /(^|\/)\.env($|\.)/.test(f) || f.endsWith('.test.js') || f.endsWith('.test.ts') || f.startsWith('src/')
+            )
+            if (forbidden.length) {
+              console.error('Tarball would ship files it must not:', forbidden)
+              process.exit(1)
+            }
+            for (const required of ['dist/index.js', 'assets/websupport-v2-openapi.json']) {
+              if (!files.includes(required)) {
+                console.error('Tarball is missing', required)
+                process.exit(1)
+              }
+            }
+            console.error(\`tarball: \${files.length} files, no secrets, no sources\`)
+          "
+
+  live-api:
+    name: live API probes (non-blocking)
+    runs-on: ubuntu-latest
+    # Deliberately advisory. These suites reach the real Websupport API without
+    # credentials — an outage upstream must never red this repository's build,
+    # but drift must still be visible. Keep this job out of branch protection.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Market hosts and OpenAPI drift
+        run: npm run test:network
