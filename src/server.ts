@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { McpServer } from '@modelcontextprotocol/server'
 import { StdioServerTransport } from '@modelcontextprotocol/server/stdio'
 import type { ApiConfig } from './auth/api-config.js'
@@ -15,7 +16,30 @@ import type { AnyToolDef, Ctx } from './tools/types.js'
  */
 
 export const SERVER_NAME = 'websupport-mcp'
-export const SERVER_VERSION = '0.0.0'
+
+/**
+ * The version reported to clients in `serverInfo`.
+ *
+ * Read from `package.json` rather than hardcoded, because a hardcoded constant
+ * silently drifts from the published version — 0.1.0 shipped announcing itself
+ * as 0.0.0, which is how this was found.
+ *
+ * The relative path resolves from both `src/server.ts` and the bundled
+ * `dist/index.js`, since each sits exactly one level below the package root,
+ * and `package.json` is always present in a published tarball. Falling back to
+ * `0.0.0` keeps a missing or unreadable manifest from taking the server down
+ * over a cosmetic field.
+ */
+function readPackageVersion(): string {
+  try {
+    const manifest = readFileSync(new URL('../package.json', import.meta.url), 'utf8')
+    return (JSON.parse(manifest) as { version?: string }).version ?? '0.0.0'
+  } catch {
+    return '0.0.0'
+  }
+}
+
+export const SERVER_VERSION = readPackageVersion()
 
 export function createCtx(config: ApiConfig): Ctx {
   return {
