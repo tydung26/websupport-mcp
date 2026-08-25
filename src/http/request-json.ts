@@ -30,10 +30,15 @@ export interface RequestDeps {
   sleep?: (ms: number) => Promise<void>
 }
 
-async function parseBody(response: Response): Promise<unknown> {
+async function parseBody(response: Response, spec: RequestSpec): Promise<unknown> {
   // Every v2 mutation (all six) answers 204 with no content, so an empty body
   // is the common path, not an edge case. JSON.parse must never see one.
   if (response.status === 204) return null
+
+  // Binary payloads must never touch response.text() — the decode is lossy.
+  if (spec.responseType === 'bytes') {
+    return new Uint8Array(await response.arrayBuffer())
+  }
 
   const contentLength = response.headers.get('content-length')
   if (contentLength === '0') return null
@@ -127,7 +132,7 @@ export async function requestJson<T = unknown>(
     })
 
     if (response.ok) {
-      return { status: response.status, body: (await parseBody(response)) as T }
+      return { status: response.status, body: (await parseBody(response, spec)) as T }
     }
 
     const decision = decideRetry({
@@ -140,7 +145,12 @@ export async function requestJson<T = unknown>(
     })
 
     if (!decision.retry) {
-      throw mapError(response.status, await parseBody(response), response.headers)
+      // An error body is always parsed normally, never as bytes.
+      throw mapError(
+        response.status,
+        await parseBody(response, { ...spec, responseType: 'auto' }),
+        response.headers,
+      )
     }
 
     await wait(decision.delayMs)

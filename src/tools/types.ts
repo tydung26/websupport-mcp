@@ -20,6 +20,13 @@ export interface RequestSpec {
   path: string
   query?: Query
   body?: unknown
+  /**
+   * `'bytes'` returns the raw response as a `Uint8Array` instead of parsing it.
+   * Needed for binary payloads such as invoice PDFs, where running the bytes
+   * through `response.text()` would silently corrupt them. The tool layer, not
+   * the transport, decides what to do with the bytes.
+   */
+  responseType?: 'auto' | 'bytes'
 }
 
 export interface ApiResponse<T = unknown> {
