@@ -76,7 +76,7 @@ jobs:
 
       - name: Changesets — open a release PR, or publish a merged one
         id: changesets
-        uses: changesets/action@v1
+        uses: changesets/action@v2
         with:
           version: npm run release:version
           publish: npm run release:publish
