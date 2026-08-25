@@ -1,0 +1,44 @@
+{
+  "name": "websupport-mcp",
+  "version": "0.0.0",
+  "description": "MCP server wrapping the Websupport REST API v1 + v2 — DNS, FTP, hosting, databases, mailboxes, VPS, invoices",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "websupport-mcp": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "files": [
+    "dist",
+    "assets"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:network": "vitest run --config vitest.network.config.ts"
+  },
+  "keywords": [
+    "mcp",
+    "modelcontextprotocol",
+    "websupport",
+    "dns",
+    "hosting"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/server": "2.0.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.10",
+    "@types/node": "^22",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  }
+}
