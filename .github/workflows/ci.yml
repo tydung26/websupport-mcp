@@ -13,6 +13,15 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# The bundler's Node floor is higher than the package's own. tsdown requires
+# Node ^22.18 || >=24.11, while the published server runs on Node >=20. So the
+# two are tested separately: `check` proves the code works on every supported
+# runtime, `build` produces the artifact on a runtime new enough to build it.
+# npm 10 cannot resolve tsdown's dependency tree at all, so every job upgrades
+# npm before installing.
+env:
+  NPM_VERSION: '11'
+
 jobs:
   check:
     name: check (node ${{ matrix.node }})
@@ -29,6 +38,11 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: npm
 
+      - name: Upgrade npm
+        run: npm install -g npm@${{ env.NPM_VERSION }}
+
+      # tsdown is installed here but never invoked on Node 20 — npm reports an
+      # engine mismatch as a warning, which is the intended outcome.
       - run: npm ci
 
       - name: Typecheck
@@ -40,8 +54,76 @@ jobs:
       - name: Test (offline)
         run: npm test
 
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Upgrade npm
+        run: npm install -g npm@${{ env.NPM_VERSION }}
+
+      - name: Verify the runner satisfies the bundler's Node floor
+        run: |
+          node --input-type=module -e "
+            const [maj, min] = process.versions.node.split('.').map(Number)
+            const ok = (maj === 22 && min >= 18) || maj >= 24
+            if (!ok) {
+              console.error(\`tsdown needs Node ^22.18 || >=24.11, runner has \${process.versions.node}\`)
+              process.exit(1)
+            }
+            console.error(\`node \${process.versions.node} satisfies the build floor\`)
+          "
+
+      - run: npm ci
+
       - name: Build
         run: npm run build
+
+      - name: Smoke-test the bundle over stdio
+        # Proves the artifact actually starts and answers an MCP handshake,
+        # rather than merely compiling. No credentials are needed to reach
+        # tools/list.
+        run: |
+          node --input-type=module -e "
+            import { spawn } from 'node:child_process'
+            const child = spawn('node', ['dist/index.js'], {
+              env: { ...process.env, WEBSUPPORT_API_KEY: 'ci', WEBSUPPORT_API_SECRET: 'ci' },
+              stdio: ['pipe', 'pipe', 'inherit'],
+            })
+            let buffer = ''
+            const send = (m) => child.stdin.write(JSON.stringify(m) + '\n')
+            const timer = setTimeout(() => { console.error('handshake timed out'); process.exit(1) }, 20000)
+            child.stdout.on('data', (chunk) => {
+              buffer += chunk
+              let i
+              while ((i = buffer.indexOf('\n')) >= 0) {
+                const line = buffer.slice(0, i).trim()
+                buffer = buffer.slice(i + 1)
+                if (!line) continue
+                const msg = JSON.parse(line)
+                if (msg.id === 1) {
+                  send({ jsonrpc: '2.0', method: 'notifications/initialized' })
+                  send({ jsonrpc: '2.0', id: 2, method: 'tools/list' })
+                } else if (msg.id === 2) {
+                  const n = msg.result.tools.length
+                  console.error(\`handshake ok, \${n} tools with no opt-ins\`)
+                  clearTimeout(timer)
+                  child.kill()
+                  process.exit(n === 30 ? 0 : 1)
+                }
+              }
+            })
+            send({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {
+              protocolVersion: '2025-11-25', capabilities: {},
+              clientInfo: { name: 'ci', version: '0' },
+            }})
+          "
 
       - name: Package contents
         # Proves the tarball is the bundle and nothing else: no environment
@@ -82,6 +164,9 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+
+      - name: Upgrade npm
+        run: npm install -g npm@${{ env.NPM_VERSION }}
 
       - run: npm ci
 
