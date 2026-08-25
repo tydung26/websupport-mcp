@@ -74,6 +74,27 @@ they are verified by request construction on purpose.
 Record what you actually proved in `docs/verification-matrix.md`. A tool that has never touched a
 real resource must not read as tested.
 
+## Releasing
+
+Nothing publishes automatically. The pipeline has a deliberate human gate in the middle.
+
+1. **Describe the change.** `npx changeset` writes a small file under `.changeset/` recording the
+   bump type and a user-facing summary. Commit it with the work.
+2. **CI opens a release PR.** On merge to `main`, the release workflow collects pending changesets
+   into a version bump, a changelog entry, a regenerated `docs/tools.md` and a synced
+   `server.json`, and opens a "chore: release" pull request. Nothing is published at this point.
+3. **Merging that PR publishes.** Only then does `changeset publish` push to npm, with provenance
+   signed under GitHub OIDC. `NPM_TOKEN` is the only long-lived secret; the provenance attestation
+   itself uses the workflow's OIDC identity, not that token.
+4. **Registry publish is separate and manual**, via `mcp-publisher login github` then
+   `mcp-publisher publish`.
+
+`server.json` is not shipped in the npm tarball — it describes the package to the MCP Registry.
+Its version is synced from `package.json` during step 2, because `changeset version` knows nothing
+about it and the two would otherwise drift. A test enforces the agreement, and a network test
+validates the manifest against the **live** registry schema rather than a vendored copy, since the
+schema is date-versioned and a stale one is rejected at publish time.
+
 ## Style
 
 Enforced by Biome and `tsconfig`, so most of it is automatic. What is not:
