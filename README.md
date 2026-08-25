@@ -99,7 +99,7 @@ exposed — the v2 tools cover both.
 ## Development
 
 ```bash
-npm test          # offline suite
+npm test              # offline suite
 npm run test:network  # live, unauthenticated probes (market hosts + OpenAPI drift)
 npm run typecheck
 npm run lint
@@ -107,6 +107,20 @@ npm run build
 ```
 
 Network suites are separated deliberately: a Websupport outage must not fail the build.
+
+### Toolchain
+
+Running the server needs **Node >= 20**. *Building* it needs more, because the bundler does:
+
+| | Requirement |
+| --- | --- |
+| Run the published package | Node >= 20 |
+| Build from source | Node ^22.18 \|\| >= 24.11, and npm >= 11 |
+
+tsdown sets that floor, and npm 10 cannot resolve its dependency tree at all — it fails with an
+unhelpful `Cannot read properties of null (reading 'edgesOut')`. If you hit that, upgrade npm
+rather than debugging the repository. CI keeps the two floors apart: tests run on Node 20 and 22,
+the bundle is built on 22.
 
 ## Licence
 
