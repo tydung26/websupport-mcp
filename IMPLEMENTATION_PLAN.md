@@ -2,26 +2,33 @@
 
 **Last updated:** 2026-08-25
 
-Progress tracker for `websupport-mcp`. Design authority is
-[`plans/260820-1355-websupport-mcp-server/plan.md`](plans/260820-1355-websupport-mcp-server/plan.md);
-verified API evidence is
-[`plans/reports/brainstorm-260820-1338-websupport-mcp-feasibility.md`](plans/reports/brainstorm-260820-1338-websupport-mcp-feasibility.md).
-Each phase heading links to the phase file that owns its steps, validation, and rollback. This file
-tracks *state only* — when scope changes, edit `plan.md` first, then mirror the item here.
+Progress tracker for `websupport-mcp`. This file tracks *state only* — when scope changes, edit
+the design authority first, then mirror the item here.
+
+> **`plans/` is not in this repository.** It is gitignored, so the planning files referenced below
+> exist only in a maintainer's working tree. They are named, not linked, because a link would 404
+> for everyone reading this on GitHub. Everything needed to *use* or *review* the project lives in
+> `README.md` and (from Phase 6) `docs/`.
+
+| Reference | Local path | Owns |
+|---|---|---|
+| Design authority | `plans/260820-1355-websupport-mcp-server/plan.md` | decisions, markets, open questions, validation log |
+| API evidence | `plans/reports/brainstorm-260820-1338-websupport-mcp-feasibility.md` | verified endpoint/auth findings |
+| Phase files | `plans/260820-1355-websupport-mcp-server/phase-NN-*.md` | steps, validation, rollback per phase |
 
 **Legend:** `[ ]` not started · `[~]` in progress · `[x]` done (code runs and is verified)
 
 ## Status
 
-| # | Phase | Deps | Effort | Status |
-|---|-------|------|--------|--------|
-| 1 | [Foundation and auth signer](plans/260820-1355-websupport-mcp-server/phase-01-foundation-and-auth-signer.md) | — | 1d | `[ ]` |
-| 2 | [HTTP client and risk policy](plans/260820-1355-websupport-mcp-server/phase-02-http-client-and-risk-policy.md) | 1 | 1d | `[ ]` |
-| 3 | [v2 tools from OpenAPI](plans/260820-1355-websupport-mcp-server/phase-03-v2-tools-from-openapi.md) | 2 | 1–1.5d | `[ ]` |
-| 4 | [v1 read tools](plans/260820-1355-websupport-mcp-server/phase-04-v1-read-tools.md) | 3 | 1.5d | `[ ]` |
-| 5 | [v1 mutating tools](plans/260820-1355-websupport-mcp-server/phase-05-v1-mutating-tools.md) | 3 | 1d | `[ ]` |
-| 6 | [Packaging and live verification](plans/260820-1355-websupport-mcp-server/phase-06-packaging-and-live-verification.md) | 4, 5 | 0.5–1d | `[ ]` |
-| 7 | [Public release](plans/260820-1355-websupport-mcp-server/phase-07-public-release.md) | 6 | 0.5–1d | `[ ]` |
+| # | Phase | Phase file (local) | Deps | Effort | Status |
+|---|-------|--------------------|------|--------|--------|
+| 1 | Foundation and auth signer | `phase-01-foundation-and-auth-signer.md` | — | 1d | `[ ]` |
+| 2 | HTTP client and risk policy | `phase-02-http-client-and-risk-policy.md` | 1 | 1d | `[ ]` |
+| 3 | v2 tools from OpenAPI | `phase-03-v2-tools-from-openapi.md` | 2 | 1–1.5d | `[ ]` |
+| 4 | v1 read tools | `phase-04-v1-read-tools.md` | 3 | 1.5d | `[ ]` |
+| 5 | v1 mutating tools | `phase-05-v1-mutating-tools.md` | 3 | 1d | `[ ]` |
+| 6 | Packaging and live verification | `phase-06-packaging-and-live-verification.md` | 4, 5 | 0.5–1d | `[ ]` |
+| 7 | Public release | `phase-07-public-release.md` | 6 | 0.5–1d | `[ ]` |
 
 Sequence: 1 → 2 → 3 → {4 ∥ 5} → 6 → 7. Phases 4 and 5 touch disjoint files and both depend only on
 the Phase 2 client + policy contracts. Phase 7 is packaging and discovery only — it changes no tool
@@ -215,6 +222,7 @@ Phase 6 step 5.
 | 2026-08-20 | 6-phase plan created under `plans/260820-1355-websupport-mcp-server/`. |
 | 2026-08-20 | This tracker created from the plan. No code yet — repo is not a git repository with commits; Phase 1 step 1 initialises it. |
 | 2026-08-25 | Validation session 1 (`/ak:plan validate`, Full tier, 7 phases). 36 claims checked — 26 verified, 7 failed, 3 unverified. Verified live: all 3 pinned signer vectors + dates + Basic header, 4 market hosts, spec md5 identical across hosts, 8 paths / 15 schemas, the 13-tool table, 15-vs-13 record enums, npm deps. **Open questions 3 and 5 closed.** 7 failures propagated into phases 1, 2, 3, 7 — 204/empty-body contract, create-re-lists-for-id, `/nic/update` transport exception (no date header, `text/html`), ten-key `filters`, empty-error-body tolerance, `parameters` absent not null, v2-only date-before-auth. 6 validation questions answered; full log in `plan.md`. |
+| 2026-08-25 | Dead links fixed: every `plans/` markdown link in this file 404d on GitHub because `plans/` is gitignored. Header links and the status-table phase links are now plain named paths, with a callout stating the directory is local-only and pointing readers at `README.md` and `docs/`. |
 | 2026-08-25 | `.gitignore` created with `plans/` ignored — planning history stays local, out of the public repo. Nothing was committed yet, so no `git rm --cached` was needed. Phase 7's repo tree updated to drop the `plans/` row. |
 | 2026-08-25 | Tracker sync pass. Diffed every phase file's success criteria against this file's exit gates — 6 gates were stale after validation session 1 (Phase 1 header asymmetry, Phase 2 204/empty-body/`nic-update`, Phase 3 create-re-list + `SRV` probe, Phase 7 MIT + unscoped name) and are now mirrored. Also resolved 1 contradiction the first sweep missed: `phase-03` asserted the `SRV` offline rejection as a gate while the same file authorises a live probe to relax it. |
 | 2026-08-25 | Scope extended for public OSS release: new Phase 7 (`phase-07-public-release.md`) covering MCP Registry `server.json`, npm provenance via OIDC, changesets, CodeQL/dependabot, LICENSE/SECURITY/CONTRIBUTING, generated `docs/tools.md`. Phase 6 step 3 now captures `examples/mcp-config/`. Open question on package identity added (numbered 5 after the validation-session renumbering). Effort 5–7d → 6–8d. Still no code. |
