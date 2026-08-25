@@ -4,8 +4,8 @@ An MCP server (TypeScript, ESM, stdio) wrapping the [Websupport](https://www.web
 API v1 + v2 — DNS, FTP, hosting, databases, mailboxes, VPS and invoices — exposed as MCP tools with
 signed HMAC-SHA1 authentication.
 
-**Status: in development.** The v2 surface (13 tools) is implemented and runs; the v1 surface
-(37 tools) is not written yet. See [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) for the phase
+**Status: in development.** The v2 surface (13 tools) and the v1 read surface (24 tools) are
+implemented and run; the 13 v1 mutating tools are not written yet. See [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) for the phase
 breakdown and current progress.
 
 ## Risk tiers
@@ -16,7 +16,7 @@ affordance.
 
 | Tier | Opt-in | Extra per-call gate | Currently |
 | --- | --- | --- | --- |
-| `read` | always on | — | 5 tools |
+| `read` | always on | — | 29 tools |
 | `write` | `WEBSUPPORT_ALLOW_WRITE=1` | — | 6 tools |
 | `destructive` | `WEBSUPPORT_ALLOW_DESTRUCTIVE=1` | `confirm: true` argument | 2 tools |
 
