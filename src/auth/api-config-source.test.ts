@@ -3,11 +3,7 @@ import { createApiConfigSource } from './api-config.js'
 import { DEFAULT_API_BASE_URL } from './market-hosts.js'
 
 /**
- * The credential-free startup contract.
- *
- * Registry build sandboxes, MCP Inspector and client config probes all
- * introspect the server before anyone holds a key. Constructing the config
- * source must therefore never touch a credential — only `resolve()` may.
+ * Constructing the source must never touch a credential; only `resolve()` may.
  */
 
 const VALID = {
@@ -60,8 +56,6 @@ describe('createApiConfigSource', () => {
   })
 
   it('still rejects an undocumented language at construction', () => {
-    // An operator who set the variable to something undocumented made a
-    // mistake worth failing on, unlike one who set no credential at all.
     expect(() => createApiConfigSource({ WEBSUPPORT_ACCEPT_LANGUAGE: 'sv' })).toThrow(
       /WEBSUPPORT_ACCEPT_LANGUAGE must be one of/,
     )

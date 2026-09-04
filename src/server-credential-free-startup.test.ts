@@ -5,13 +5,9 @@ import { createCtx, createServer } from './server.js'
 import { registry } from './tools/registry.js'
 
 /**
- * A server with no credentials in its environment must still build.
- *
- * 0.1.1 read the credentials in `main()`, so an unauthenticated start exited
- * before the transport opened and every automated consumer — registry build
- * sandboxes, MCP Inspector, client config probes — saw only
- * `MCP error -32000: Connection closed`. The tools are public information;
- * only calling one needs a secret.
+ * A server with no credentials must still build. 0.1.1 read them in `main()`,
+ * so an unauthenticated start exited before the transport opened and clients
+ * saw only `MCP error -32000: Connection closed`.
  */
 
 const EMPTY = {}

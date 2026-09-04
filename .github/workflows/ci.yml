@@ -73,11 +73,8 @@ jobs:
         run: npm run build
 
       - name: Smoke-test the bundle over stdio, unauthenticated
-        # Proves the artifact starts, answers an MCP handshake and lists its
-        # tools with no credentials in the environment, and that calling one
-        # then fails with an actionable message instead of killing the session.
-        # 0.1.1 read the credentials before opening the transport, so every
-        # registry build sandbox saw only `Connection closed`.
+        # Proves the artifact starts and serves an MCP session with no
+        # credentials present, not merely that it compiles.
         run: npx vite-node scripts/smoke-stdio-handshake.ts -- node dist/index.js
 
       - name: Generated tool list is current
@@ -118,9 +115,8 @@ jobs:
   docker:
     name: container image
     runs-on: ubuntu-latest
-    # The image is what registry build sandboxes (Glama, MCP hosting) actually
-    # run. Building it here stops the Dockerfile from rotting behind the
-    # bundler config — a broken build there withholds the listing entirely.
+    # Aggregators build and run this image; a broken build there withholds the
+    # listing entirely, so it cannot be allowed to rot behind the bundler.
     steps:
       - uses: actions/checkout@v7
 

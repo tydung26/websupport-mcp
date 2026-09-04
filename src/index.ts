@@ -4,7 +4,6 @@ import { resolveTierPolicy } from './policy/risk-tiers.js'
 import { SERVER_NAME, startStdioServer } from './server.js'
 
 async function main(): Promise<void> {
-  // Credentials are deliberately not read here — see `createApiConfigSource`.
   const source = createApiConfigSource()
   const policy = resolveTierPolicy()
   await startStdioServer(source, policy)

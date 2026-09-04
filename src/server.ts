@@ -41,16 +41,10 @@ function readPackageVersion(): string {
 
 export const SERVER_VERSION = readPackageVersion()
 
-/**
- * `resolve` is called per request rather than once, so a deployment that never
- * sets credentials still starts, registers its tools and answers `tools/list`;
- * the missing variable surfaces as a typed tool error on the first call that
- * needs to sign something.
- */
+/** `resolve` runs per request, so a deployment with no credentials still starts. */
 export function createCtx(resolve: () => ApiConfig): Ctx {
   return {
-    // `async` matters: `resolve` throws when a credential is missing, and
-    // `Ctx.request` promises a rejected promise, not a synchronous throw.
+    // `async` because `resolve` throws, and `Ctx.request` promises a rejection.
     request: async (spec) => requestJson(spec, resolve()),
   }
 }

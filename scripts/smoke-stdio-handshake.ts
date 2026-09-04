@@ -2,31 +2,19 @@
 import { spawn } from 'node:child_process'
 
 /**
- * Drive an MCP handshake over stdio against an arbitrary command, with no
- * credentials in the environment.
+ * Drive `initialize`, `tools/list` and one `tools/call` over stdio against an
+ * arbitrary command, with every `WEBSUPPORT_*` variable stripped from the
+ * child environment. The handshake must succeed unauthenticated and the call
+ * must fail with an actionable message rather than closing the transport.
  *
- * Three things are proved at once, and the middle one was once broken:
- *   * the artifact starts and answers `initialize` + `tools/list` rather than
- *     merely compiling;
- *   * it does so *unauthenticated*. 0.1.1 read the credentials before opening
- *     the transport, so every registry build sandbox and inspector saw only
- *     `Connection closed`. Passing no key here is the regression test;
- *   * calling a tool without credentials returns a typed error naming the
- *     missing variable, and leaves the session alive.
- *
- * Usage:
  *   vite-node scripts/smoke-stdio-handshake.ts -- node dist/index.js
  *   vite-node scripts/smoke-stdio-handshake.ts -- docker run -i --rm image
- *
- * `EXPECT_TOOLS` (default 30) asserts the read tier is registered with no
- * opt-ins. `WEBSUPPORT_*` variables are stripped from the child environment so
- * a developer's local shell cannot make this pass for the wrong reason.
  */
 
 const EXPECT_TOOLS = Number(process.env.EXPECT_TOOLS ?? '30')
 const TIMEOUT_MS = 30_000
 const PROTOCOL_VERSION = '2025-11-25'
-/** A read tool taking no arguments, so the call reaches the signing step. */
+/** Takes no arguments, so the call reaches the signing step. */
 const PROBE_TOOL = 'ws_auth_check'
 
 const [command, ...args] = process.argv.slice(2)
@@ -35,7 +23,6 @@ if (!command) {
   process.exit(2)
 }
 
-/** The child must see no Websupport configuration at all. */
 function credentialFreeEnv(): NodeJS.ProcessEnv {
   return Object.fromEntries(
     Object.entries(process.env).filter(([name]) => !name.startsWith('WEBSUPPORT_')),
@@ -56,8 +43,6 @@ const send = (message: unknown) => child.stdin.write(`${JSON.stringify(message)}
 const timer = setTimeout(() => fail(`handshake timed out after ${TIMEOUT_MS}ms`), TIMEOUT_MS)
 
 child.on('exit', (code) => {
-  // Reached only if the child dies before answering, which is exactly the
-  // failure this script exists to catch.
   clearTimeout(timer)
   fail(`the server exited with code ${code} before completing the handshake`)
 })

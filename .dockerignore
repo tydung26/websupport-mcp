@@ -1,6 +1,4 @@
-# The build stage copies only what it needs, but keeping the context small
-# keeps the build fast and stops a local .env from ever reaching a layer.
-# assets/ stays: the v2 OpenAPI spec is inlined into the bundle at build time.
+# assets/ is deliberately absent: the OpenAPI spec is inlined at build time.
 node_modules
 dist
 .git

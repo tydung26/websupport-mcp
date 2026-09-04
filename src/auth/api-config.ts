@@ -15,10 +15,7 @@ export interface ApiCredentials {
   secret: string
 }
 
-/**
- * Everything that is not a credential. Resolvable with no secrets present,
- * which is what lets the server start and answer `tools/list` unauthenticated.
- */
+/** Everything that is not a credential, so it resolves with no secrets present. */
 export interface ApiSettings {
   baseUrl: string
   acceptLanguage: AcceptLanguage
@@ -54,13 +51,8 @@ function resolveAcceptLanguage(raw: string | undefined): AcceptLanguage {
 }
 
 /**
- * Market and language only — no credentials read, so this never throws over an
- * absent secret. Emits the unknown-host warning to stderr; stdout belongs to
- * the JSON-RPC transport and one stray write there kills the session.
- *
- * An *invalid* language still throws: an operator who set the variable to
- * something undocumented made a mistake worth failing on, unlike one who set
- * nothing at all.
+ * Never throws over an absent secret, since it reads none. An invalid language
+ * still throws. Warns to stderr — stdout is the JSON-RPC transport.
  */
 export function loadSettings(env: Env = process.env): ApiSettings {
   const { baseUrl, warning } = resolveBaseUrl(env.WEBSUPPORT_API_BASE_URL)
@@ -78,18 +70,9 @@ export function loadApiConfig(env: Env = process.env): ApiConfig {
 }
 
 /**
- * Settings resolved now, credentials resolved on first use.
- *
- * The server must complete a handshake and answer `tools/list` with no
- * credentials present at all: registry build sandboxes, MCP Inspector and
- * client config probes all introspect before anyone holds a key. Validating
- * credentials during startup turned a missing variable into an exited process
- * and an opaque `Connection closed` on the client side. Deferring it means the
- * same missing variable surfaces as a typed error on the one call that
- * actually needs the secret.
- *
- * The credential read is memoised, so the message is identical on every call
- * and a rotated environment is not re-read mid-session.
+ * Settings now, credentials on first use, memoised. `tools/list` must answer
+ * unauthenticated: reading credentials at startup turned a missing variable
+ * into an exited process and an opaque `Connection closed` at the client.
  */
 export interface ApiConfigSource {
   settings: ApiSettings
