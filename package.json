@@ -1,6 +1,6 @@
 {
   "name": "websupport-mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "MCP server wrapping the Websupport REST API v1 + v2 — DNS, FTP, hosting, databases, mailboxes, VPS, invoices",
   "license": "MIT",
   "type": "module",
