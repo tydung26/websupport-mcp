@@ -106,6 +106,12 @@ Tier follows **what an operation destroys**, not whether it writes. A graceful V
 `write`; a hard power-cycle is `destructive` because it can corrupt in-flight writes. Taking a
 snapshot is `write`; restoring one is `destructive` because it discards everything since.
 
+Every tool declares all four MCP hints as explicit booleans: `readOnlyHint`, `destructiveHint` and
+`idempotentHint` follow the tier, `openWorldHint` is always true since every tool reaches a live
+account. An absent hint reads as unknown rather than false, and at least one directory rejects a
+tool that omits any of them. `ws_vps_hard_reboot` overrides the tier's idempotency — each call is
+another power cut.
+
 `confirm: true` — not MCP elicitation — is the safety boundary. Negotiation settles at `2025-11-25`
 with the current SDK, below the revision elicitation needs, and a gate that vanishes against an
 older client is not a gate.
@@ -116,6 +122,22 @@ Everything arrives through `Ctx`, never a module-level constant, so a market swi
 configuration rather than a code change. `market-hosts.ts` is the only file permitted to contain an
 API host literal, enforced by a grep test. An unrecognised host warns to stderr and is used anyway
 — a new market should work without waiting for a release.
+
+Credentials are read on the first request, not at startup. Settings (market, language) resolve
+without them, so the server completes a handshake and answers `tools/list` unauthenticated: every
+automated consumer — registry build sandboxes, MCP Inspector, client config probes — introspects
+before anyone holds a key. Reading them in `main()` turned an absent variable into an exited
+process and an opaque `Connection closed`; now it is a typed error on the one call that needs to
+sign something. `Ctx` carries no credential at all, which is why no tool result can leak one.
+
+## Container image
+
+The `Dockerfile` builds the same bundle CI publishes: build stage installs everything and runs the
+bundler, runtime stage installs production dependencies only. The MCP SDK and zod are never
+bundled — bundling the SDK defeats its conditional exports — so they must be installed rather than
+copied. CI builds the image and drives the same unauthenticated handshake through
+`docker run -i`, because a broken image is what a registry build sandbox sees, and a failed build
+there withholds the listing.
 
 ## Where the schemas come from
 

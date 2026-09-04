@@ -19,7 +19,6 @@ function stubCtx(responses: ApiResponse[]) {
   const calls: RequestSpec[] = []
   let index = 0
   const ctx: Ctx = {
-    config: CONFIG,
     request: async (spec) => {
       calls.push(spec)
       return (responses[index++] ?? { status: 200, body: null }) as ApiResponse<never>
@@ -181,7 +180,7 @@ describe('path encoding', () => {
 })
 
 describe('no secret reaches a tool result', () => {
-  it('is not carried on Ctx into any handler return value', async () => {
+  it('cannot leak through Ctx, which carries no credential at all', async () => {
     const { ctx } = stubCtx([{ status: 200, body: { verified: true } }])
     const spy = vi.spyOn(JSON, 'stringify')
     const result = await tool('ws_auth_check').handler({}, ctx)

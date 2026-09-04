@@ -78,6 +78,19 @@ of `websupport-mcp`.
 Once it is wired up, ask your client to run `ws_auth_check`. It returns `{"verified": true}` when
 the credentials work, which is the quickest way to separate a bad key from anything else.
 
+### Docker
+
+A [`Dockerfile`](Dockerfile) is included, for hosts that run containers rather than `npx` and for
+registry build sandboxes:
+
+```bash
+docker build -t websupport-mcp .
+docker run -i --rm -e WEBSUPPORT_API_KEY -e WEBSUPPORT_API_SECRET websupport-mcp
+```
+
+`-i` is not optional — the transport is stdio. No credentials are baked into the image; pass them
+per run.
+
 ### From a local checkout
 
 For development, or to run unreleased changes:
@@ -105,6 +118,11 @@ authenticates against `/nic/update` and nothing else.
 | `WEBSUPPORT_ALLOW_DESTRUCTIVE` | no | off | Set to `1` to register destructive tools. |
 
 Copy [`.env.example`](.env.example) for local development. `.env` is gitignored.
+
+Missing credentials do not stop the server. It starts, registers its tools and answers `tools/list`
+unauthenticated — which is what registry build sandboxes, MCP Inspector and client config probes
+do before anyone holds a key — and the first tool call then fails with a message naming the
+variable that is absent.
 
 ## Markets
 
