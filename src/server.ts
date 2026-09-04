@@ -81,6 +81,24 @@ function errorResult(error: unknown) {
   }
 }
 
+/**
+ * All four hints, always explicit. Clients and directories treat an absent
+ * hint as unknown rather than false, and at least one directory rejects a tool
+ * that omits any of them.
+ *
+ * `openWorldHint` is `true` for every tool: each one calls the Websupport API,
+ * so the set of entities it can touch is whatever that account owns.
+ * Idempotency follows the tier unless a tool overrides it.
+ */
+export function annotationsFor(tool: AnyToolDef) {
+  return {
+    readOnlyHint: tool.tier === 'read',
+    destructiveHint: tool.tier === 'destructive',
+    idempotentHint: tool.idempotent ?? tool.tier !== 'write',
+    openWorldHint: true,
+  }
+}
+
 function registerTool(server: McpServer, tool: AnyToolDef, ctx: Ctx): void {
   server.registerTool(
     tool.name,
@@ -88,11 +106,7 @@ function registerTool(server: McpServer, tool: AnyToolDef, ctx: Ctx): void {
       ...(tool.title ? { title: tool.title } : {}),
       description: tool.description,
       inputSchema: tool.inputSchema,
-      annotations: {
-        readOnlyHint: tool.tier === 'read',
-        destructiveHint: tool.tier === 'destructive',
-        idempotentHint: tool.tier !== 'write',
-      },
+      annotations: annotationsFor(tool),
     },
     async (input: unknown) => {
       try {

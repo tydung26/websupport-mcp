@@ -106,6 +106,12 @@ Tier follows **what an operation destroys**, not whether it writes. A graceful V
 `write`; a hard power-cycle is `destructive` because it can corrupt in-flight writes. Taking a
 snapshot is `write`; restoring one is `destructive` because it discards everything since.
 
+Every tool declares all four MCP hints as explicit booleans: `readOnlyHint`, `destructiveHint` and
+`idempotentHint` follow the tier, `openWorldHint` is always true since every tool reaches a live
+account. An absent hint reads as unknown rather than false, and at least one directory rejects a
+tool that omits any of them. `ws_vps_hard_reboot` overrides the tier's idempotency — each call is
+another power cut.
+
 `confirm: true` — not MCP elicitation — is the safety boundary. Negotiation settles at `2025-11-25`
 with the current SDK, below the revision elicitation needs, and a gate that vanishes against an
 older client is not a gate.

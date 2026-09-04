@@ -14,6 +14,9 @@ import { spawn } from 'node:child_process'
 const EXPECT_TOOLS = Number(process.env.EXPECT_TOOLS ?? '30')
 const TIMEOUT_MS = 30_000
 const PROTOCOL_VERSION = '2025-11-25'
+/** Directories reject a tool that omits any of these, so check the wire, not the source. */
+const HINTS = ['readOnlyHint', 'destructiveHint', 'idempotentHint', 'openWorldHint'] as const
+
 /** Takes no arguments, so the call reaches the signing step. */
 const PROBE_TOOL = 'ws_auth_check'
 
@@ -59,7 +62,11 @@ child.stdout.on('data', (chunk: Buffer) => {
 
     const message = JSON.parse(line) as {
       id?: number
-      result?: { tools?: { name: string }[]; isError?: boolean; content?: { text?: string }[] }
+      result?: {
+        tools?: { name: string; annotations?: Record<string, unknown> }[]
+        isError?: boolean
+        content?: { text?: string }[]
+      }
     }
 
     if (message.id === 1) {
@@ -74,7 +81,14 @@ child.stdout.on('data', (chunk: Buffer) => {
         clearTimeout(timer)
         fail(`expected ${EXPECT_TOOLS} tools with no opt-ins, got ${tools.length}`)
       }
-      console.error(`smoke: handshake ok unauthenticated, ${tools.length} tools listed`)
+      const unhinted = tools.filter((tool) =>
+        HINTS.some((hint) => typeof tool.annotations?.[hint] !== 'boolean'),
+      )
+      if (unhinted.length) {
+        clearTimeout(timer)
+        fail(`tools missing a boolean hint: ${unhinted.map((tool) => tool.name).join(', ')}`)
+      }
+      console.error(`smoke: handshake ok unauthenticated, ${tools.length} tools listed, all hinted`)
       send({
         jsonrpc: '2.0',
         id: 3,

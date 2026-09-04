@@ -55,6 +55,8 @@ export const vpsWriteTools: AnyToolDef[] = [
     description:
       'Force a VPS to power-cycle without letting the guest shut down. Equivalent to pulling the power cable: writes still in flight are lost and filesystems or databases can be left corrupted. Use ws_vps_reboot unless the machine is already unresponsive.',
     tier: 'destructive',
+    // Every call is another power cut, so this one does not converge.
+    idempotent: false,
     inputSchema: z.strictObject({ userId: userIdArg, vpsId: vpsIdArg, ...confirmArg }),
     handler: async ({ userId, vpsId }, ctx) => {
       const { status } = await ctx.request({

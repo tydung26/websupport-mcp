@@ -52,6 +52,11 @@ export interface ToolDef<I = unknown> {
   title?: string
   description: string
   tier: RiskTier
+  /**
+   * Overrides the tier's idempotency, which is right for everything except a
+   * power-cycle: repeating one cuts power again rather than converging.
+   */
+  idempotent?: boolean
   inputSchema: z.ZodType<I>
   handler: (input: I, ctx: Ctx) => Promise<unknown>
 }
@@ -70,6 +75,7 @@ export function defineTool<S extends z.ZodType>(def: {
   title?: string
   description: string
   tier: RiskTier
+  idempotent?: boolean
   inputSchema: S
   handler: (input: z.output<S>, ctx: Ctx) => Promise<unknown>
 }): ToolDef<z.output<S>> {
