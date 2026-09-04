@@ -78,10 +78,11 @@ jobs:
         id: changesets
         uses: changesets/action@v2
         with:
-          version: npm run release:version
-          publish: npm run release:publish
-          title: 'chore: release'
-          commit: 'chore: release'
+          # v2 renamed every one of these; the old names are hard errors.
+          version-script: npm run release:version
+          publish-script: npm run release:publish
+          pr-title: 'chore: release'
+          commit-message: 'chore: release'
         env:
           # No npm credential. Publishing authenticates through trusted
           # publishing: the npm CLI detects the OIDC environment from the
@@ -122,4 +123,4 @@ jobs:
         if: always()
         run: |
           echo "published: ${{ steps.changesets.outputs.published }}"
-          echo "pull request: ${{ steps.changesets.outputs.pullRequestNumber }}"
+          echo "pull request: ${{ steps.changesets.outputs.pr-number }}"
