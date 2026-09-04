@@ -15,10 +15,13 @@ export interface ApiCredentials {
   secret: string
 }
 
-export interface ApiConfig extends ApiCredentials {
+/** Everything that is not a credential, so it resolves with no secrets present. */
+export interface ApiSettings {
   baseUrl: string
   acceptLanguage: AcceptLanguage
 }
+
+export interface ApiConfig extends ApiCredentials, ApiSettings {}
 
 export type Env = Record<string, string | undefined>
 
@@ -48,17 +51,44 @@ function resolveAcceptLanguage(raw: string | undefined): AcceptLanguage {
 }
 
 /**
- * Full runtime configuration. Emits the unknown-host warning to stderr; stdout
- * belongs to the JSON-RPC transport and one stray write there kills the session.
+ * Never throws over an absent secret, since it reads none. An invalid language
+ * still throws. Warns to stderr — stdout is the JSON-RPC transport.
  */
-export function loadApiConfig(env: Env = process.env): ApiConfig {
+export function loadSettings(env: Env = process.env): ApiSettings {
   const { baseUrl, warning } = resolveBaseUrl(env.WEBSUPPORT_API_BASE_URL)
   if (warning) console.warn(`[websupport-mcp] ${warning}`)
 
   return {
-    ...loadCredentials(env),
     baseUrl,
     acceptLanguage: resolveAcceptLanguage(env.WEBSUPPORT_ACCEPT_LANGUAGE),
+  }
+}
+
+/** Full runtime configuration, credentials included. */
+export function loadApiConfig(env: Env = process.env): ApiConfig {
+  return { ...loadCredentials(env), ...loadSettings(env) }
+}
+
+/**
+ * Settings now, credentials on first use, memoised. `tools/list` must answer
+ * unauthenticated: reading credentials at startup turned a missing variable
+ * into an exited process and an opaque `Connection closed` at the client.
+ */
+export interface ApiConfigSource {
+  settings: ApiSettings
+  resolve: () => ApiConfig
+}
+
+export function createApiConfigSource(env: Env = process.env): ApiConfigSource {
+  const settings = loadSettings(env)
+  let credentials: ApiCredentials | undefined
+
+  return {
+    settings,
+    resolve: () => {
+      credentials ??= loadCredentials(env)
+      return { ...credentials, ...settings }
+    },
   }
 }
 

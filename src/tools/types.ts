@@ -1,5 +1,4 @@
 import type { z } from 'zod'
-import type { ApiConfig } from '../auth/api-config.js'
 import type { Query } from '../http/build-path-with-query.js'
 
 /**
@@ -40,7 +39,6 @@ export interface ApiResponse<T = unknown> {
  * is configuration and tests need no module mocking.
  */
 export interface Ctx {
-  config: ApiConfig
   request: <T = unknown>(spec: RequestSpec) => Promise<ApiResponse<T>>
 }
 
@@ -54,6 +52,11 @@ export interface ToolDef<I = unknown> {
   title?: string
   description: string
   tier: RiskTier
+  /**
+   * Overrides the tier's idempotency, which is right for everything except a
+   * power-cycle: repeating one cuts power again rather than converging.
+   */
+  idempotent?: boolean
   inputSchema: z.ZodType<I>
   handler: (input: I, ctx: Ctx) => Promise<unknown>
 }
@@ -72,6 +75,7 @@ export function defineTool<S extends z.ZodType>(def: {
   title?: string
   description: string
   tier: RiskTier
+  idempotent?: boolean
   inputSchema: S
   handler: (input: z.output<S>, ctx: Ctx) => Promise<unknown>
 }): ToolDef<z.output<S>> {

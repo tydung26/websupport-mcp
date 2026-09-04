@@ -2,7 +2,6 @@
 import { writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
-import type { ApiConfig } from '../src/auth/api-config.js'
 import { registry } from '../src/tools/registry.js'
 import type { AnyToolDef, Ctx, RequestSpec } from '../src/tools/types.js'
 
@@ -25,13 +24,6 @@ import type { AnyToolDef, Ctx, RequestSpec } from '../src/tools/types.js'
  */
 
 const OUT = fileURLToPath(new URL('../docs/tools.md', import.meta.url))
-
-const CONFIG: ApiConfig = {
-  apiKey: 'placeholder',
-  secret: 'placeholder',
-  baseUrl: 'https://rest.websupport.sk',
-  acceptLanguage: 'en_us',
-}
 
 interface JsonSchema {
   properties?: Record<string, JsonSchemaProperty>
@@ -79,7 +71,6 @@ function placeholderInput(tool: AnyToolDef): Record<string, unknown> {
 async function routeOf(tool: AnyToolDef): Promise<string> {
   let recorded: RequestSpec | undefined
   const ctx: Ctx = {
-    config: CONFIG,
     request: async (spec) => {
       recorded ??= spec
       // Enough shape for a create handler to survive its follow-up re-list.

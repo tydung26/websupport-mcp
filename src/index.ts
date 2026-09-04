@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-import { loadApiConfig } from './auth/api-config.js'
+import { createApiConfigSource } from './auth/api-config.js'
 import { resolveTierPolicy } from './policy/risk-tiers.js'
 import { SERVER_NAME, startStdioServer } from './server.js'
 
 async function main(): Promise<void> {
-  const config = loadApiConfig()
+  const source = createApiConfigSource()
   const policy = resolveTierPolicy()
-  await startStdioServer(config, policy)
+  await startStdioServer(source, policy)
 }
 
 main().catch((error: unknown) => {
