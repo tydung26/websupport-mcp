@@ -117,6 +117,22 @@ configuration rather than a code change. `market-hosts.ts` is the only file perm
 API host literal, enforced by a grep test. An unrecognised host warns to stderr and is used anyway
 — a new market should work without waiting for a release.
 
+Credentials are read on the first request, not at startup. Settings (market, language) resolve
+without them, so the server completes a handshake and answers `tools/list` unauthenticated: every
+automated consumer — registry build sandboxes, MCP Inspector, client config probes — introspects
+before anyone holds a key. Reading them in `main()` turned an absent variable into an exited
+process and an opaque `Connection closed`; now it is a typed error on the one call that needs to
+sign something. `Ctx` carries no credential at all, which is why no tool result can leak one.
+
+## Container image
+
+The `Dockerfile` builds the same bundle CI publishes: build stage installs everything and runs the
+bundler, runtime stage installs production dependencies only. The MCP SDK and zod are never
+bundled — bundling the SDK defeats its conditional exports — so they must be installed rather than
+copied. CI builds the image and drives the same unauthenticated handshake through
+`docker run -i`, because a broken image is what a registry build sandbox sees, and a failed build
+there withholds the listing.
+
 ## Where the schemas come from
 
 The v2 record-type enums and the ten `filters` keys are read out of the vendored OpenAPI document

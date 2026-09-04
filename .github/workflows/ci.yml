@@ -72,45 +72,13 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Smoke-test the bundle over stdio
-        # Proves the artifact actually starts and answers an MCP handshake,
-        # rather than merely compiling. No credentials are needed to reach
-        # tools/list.
-        run: |
-          node --input-type=module -e "
-            import { spawn } from 'node:child_process'
-            const child = spawn('node', ['dist/index.js'], {
-              env: { ...process.env, WEBSUPPORT_API_KEY: 'ci', WEBSUPPORT_API_SECRET: 'ci' },
-              stdio: ['pipe', 'pipe', 'inherit'],
-            })
-            let buffer = ''
-            const send = (m) => child.stdin.write(JSON.stringify(m) + '\n')
-            const timer = setTimeout(() => { console.error('handshake timed out'); process.exit(1) }, 20000)
-            child.stdout.on('data', (chunk) => {
-              buffer += chunk
-              let i
-              while ((i = buffer.indexOf('\n')) >= 0) {
-                const line = buffer.slice(0, i).trim()
-                buffer = buffer.slice(i + 1)
-                if (!line) continue
-                const msg = JSON.parse(line)
-                if (msg.id === 1) {
-                  send({ jsonrpc: '2.0', method: 'notifications/initialized' })
-                  send({ jsonrpc: '2.0', id: 2, method: 'tools/list' })
-                } else if (msg.id === 2) {
-                  const n = msg.result.tools.length
-                  console.error(\`handshake ok, \${n} tools with no opt-ins\`)
-                  clearTimeout(timer)
-                  child.kill()
-                  process.exit(n === 30 ? 0 : 1)
-                }
-              }
-            })
-            send({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {
-              protocolVersion: '2025-11-25', capabilities: {},
-              clientInfo: { name: 'ci', version: '0' },
-            }})
-          "
+      - name: Smoke-test the bundle over stdio, unauthenticated
+        # Proves the artifact starts, answers an MCP handshake and lists its
+        # tools with no credentials in the environment, and that calling one
+        # then fails with an actionable message instead of killing the session.
+        # 0.1.1 read the credentials before opening the transport, so every
+        # registry build sandbox saw only `Connection closed`.
+        run: npx vite-node scripts/smoke-stdio-handshake.ts -- node dist/index.js
 
       - name: Generated tool list is current
         # A hand-maintained table of fifty tools goes stale in one release and
@@ -146,6 +114,31 @@ jobs:
             }
             console.error(\`tarball: \${files.length} files, single bundle, no secrets, no sources\`)
           "
+
+  docker:
+    name: container image
+    runs-on: ubuntu-latest
+    # The image is what registry build sandboxes (Glama, MCP hosting) actually
+    # run. Building it here stops the Dockerfile from rotting behind the
+    # bundler config — a broken build there withholds the listing entirely.
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Upgrade npm
+        run: npm install -g npm@${{ env.NPM_VERSION }}
+
+      - run: npm ci
+
+      - name: Build the image
+        run: docker build -t websupport-mcp:ci .
+
+      - name: Smoke-test the container over stdio, unauthenticated
+        run: npx vite-node scripts/smoke-stdio-handshake.ts -- docker run -i --rm websupport-mcp:ci
 
   live-api:
     name: live API probes (non-blocking)

@@ -13,7 +13,7 @@ outage cannot fail the build.
 | File | Responsibility |
 | --- | --- |
 | `signer.ts` | The canonical string, HMAC-SHA1, the `Basic` header, and the date header value. Pure and synchronous — the timestamp is an argument, so tests need no clock mocking. Takes `pathForSignature`, **not** the request-target. |
-| `api-config.ts` | Reads the environment. Fails fast with an actionable message; `describeCredentials` reports the secret's *length* so diagnostics have something safe to print. |
+| `api-config.ts` | Reads the environment. `loadSettings` (market, language) resolves with no secrets present; `createApiConfigSource` defers the credential read to the first request so the server starts unauthenticated. Both fail with an actionable message; `describeCredentials` reports the secret's *length* so diagnostics have something safe to print. |
 | `market-hosts.ts` | The only file allowed to contain an API host literal, enforced by `no-hardcoded-host.test.ts`. Validates the base URL, warns rather than throws on an unknown host. |
 
 Named `api-config.ts` rather than `credentials.ts` because local tooling blocks the latter
@@ -78,7 +78,7 @@ probing routes live.
 | File | Responsibility |
 | --- | --- |
 | `src/server.ts` | The only file importing the MCP SDK. Registers allowed tools, renders results, converts errors into typed tool results. |
-| `src/index.ts` | The bin. Loads config, resolves the tier policy, connects stdio, and exits non-zero with a stderr message on failure. |
+| `src/index.ts` | The bin. Builds the config source (credentials deliberately unread), resolves the tier policy, connects stdio, and exits non-zero with a stderr message on failure. |
 
 ## `scripts/`
 
@@ -86,6 +86,7 @@ probing routes live.
 | --- | --- |
 | `generate-tools-doc.ts` | Emits `docs/tools.md`. Derives method and path by running each handler against a recording transport with placeholders named after its own arguments. |
 | `sync-server-json-version.ts` | Copies the package version into `server.json` during release, since `changeset version` does not know about it. |
+| `smoke-stdio-handshake.ts` | Drives `initialize` + `tools/list` + one `tools/call` against any command with `WEBSUPPORT_*` stripped from the environment. CI runs it against both the bundle and the container image. |
 
 Both run under `vite-node`: Node's type stripping cannot resolve the `.js` specifiers NodeNext
 requires.
