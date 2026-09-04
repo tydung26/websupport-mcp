@@ -15,10 +15,16 @@ export interface ApiCredentials {
   secret: string
 }
 
-export interface ApiConfig extends ApiCredentials {
+/**
+ * Everything that is not a credential. Resolvable with no secrets present,
+ * which is what lets the server start and answer `tools/list` unauthenticated.
+ */
+export interface ApiSettings {
   baseUrl: string
   acceptLanguage: AcceptLanguage
 }
+
+export interface ApiConfig extends ApiCredentials, ApiSettings {}
 
 export type Env = Record<string, string | undefined>
 
@@ -48,17 +54,58 @@ function resolveAcceptLanguage(raw: string | undefined): AcceptLanguage {
 }
 
 /**
- * Full runtime configuration. Emits the unknown-host warning to stderr; stdout
- * belongs to the JSON-RPC transport and one stray write there kills the session.
+ * Market and language only — no credentials read, so this never throws over an
+ * absent secret. Emits the unknown-host warning to stderr; stdout belongs to
+ * the JSON-RPC transport and one stray write there kills the session.
+ *
+ * An *invalid* language still throws: an operator who set the variable to
+ * something undocumented made a mistake worth failing on, unlike one who set
+ * nothing at all.
  */
-export function loadApiConfig(env: Env = process.env): ApiConfig {
+export function loadSettings(env: Env = process.env): ApiSettings {
   const { baseUrl, warning } = resolveBaseUrl(env.WEBSUPPORT_API_BASE_URL)
   if (warning) console.warn(`[websupport-mcp] ${warning}`)
 
   return {
-    ...loadCredentials(env),
     baseUrl,
     acceptLanguage: resolveAcceptLanguage(env.WEBSUPPORT_ACCEPT_LANGUAGE),
+  }
+}
+
+/** Full runtime configuration, credentials included. */
+export function loadApiConfig(env: Env = process.env): ApiConfig {
+  return { ...loadCredentials(env), ...loadSettings(env) }
+}
+
+/**
+ * Settings resolved now, credentials resolved on first use.
+ *
+ * The server must complete a handshake and answer `tools/list` with no
+ * credentials present at all: registry build sandboxes, MCP Inspector and
+ * client config probes all introspect before anyone holds a key. Validating
+ * credentials during startup turned a missing variable into an exited process
+ * and an opaque `Connection closed` on the client side. Deferring it means the
+ * same missing variable surfaces as a typed error on the one call that
+ * actually needs the secret.
+ *
+ * The credential read is memoised, so the message is identical on every call
+ * and a rotated environment is not re-read mid-session.
+ */
+export interface ApiConfigSource {
+  settings: ApiSettings
+  resolve: () => ApiConfig
+}
+
+export function createApiConfigSource(env: Env = process.env): ApiConfigSource {
+  const settings = loadSettings(env)
+  let credentials: ApiCredentials | undefined
+
+  return {
+    settings,
+    resolve: () => {
+      credentials ??= loadCredentials(env)
+      return { ...credentials, ...settings }
+    },
   }
 }
 

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { McpServer } from '@modelcontextprotocol/server'
 import { StdioServerTransport } from '@modelcontextprotocol/server/stdio'
-import type { ApiConfig } from './auth/api-config.js'
+import type { ApiConfig, ApiConfigSource } from './auth/api-config.js'
 import { WebsupportApiError } from './http/map-error.js'
 import { requestJson } from './http/request-json.js'
 import { allowedTools, describeTierPolicy, type TierPolicy } from './policy/risk-tiers.js'
@@ -41,10 +41,17 @@ function readPackageVersion(): string {
 
 export const SERVER_VERSION = readPackageVersion()
 
-export function createCtx(config: ApiConfig): Ctx {
+/**
+ * `resolve` is called per request rather than once, so a deployment that never
+ * sets credentials still starts, registers its tools and answers `tools/list`;
+ * the missing variable surfaces as a typed tool error on the first call that
+ * needs to sign something.
+ */
+export function createCtx(resolve: () => ApiConfig): Ctx {
   return {
-    config,
-    request: (spec) => requestJson(spec, config),
+    // `async` matters: `resolve` throws when a credential is missing, and
+    // `Ctx.request` promises a rejected promise, not a synchronous throw.
+    request: async (spec) => requestJson(spec, resolve()),
   }
 }
 
@@ -109,9 +116,9 @@ function registerTool(server: McpServer, tool: AnyToolDef, ctx: Ctx): void {
  * Filtering happens before registration, so a disallowed tool never reaches
  * `tools/list` — it costs the client no context and offers no affordance.
  */
-export function createServer(config: ApiConfig, policy: TierPolicy): McpServer {
+export function createServer(source: ApiConfigSource, policy: TierPolicy): McpServer {
   const server = new McpServer({ name: SERVER_NAME, version: SERVER_VERSION })
-  const ctx = createCtx(config)
+  const ctx = createCtx(source.resolve)
 
   for (const tool of allowedTools(registry, policy)) {
     registerTool(server, tool, ctx)
@@ -120,14 +127,17 @@ export function createServer(config: ApiConfig, policy: TierPolicy): McpServer {
   return server
 }
 
-export async function startStdioServer(config: ApiConfig, policy: TierPolicy): Promise<McpServer> {
-  const server = createServer(config, policy)
+export async function startStdioServer(
+  source: ApiConfigSource,
+  policy: TierPolicy,
+): Promise<McpServer> {
+  const server = createServer(source, policy)
   const registered = allowedTools(registry, policy).length
 
   // stdout belongs to the JSON-RPC transport — one stray write there corrupts
   // the stream and kills the session. Every diagnostic goes to stderr.
   console.error(
-    `[${SERVER_NAME}] ${registered} tools registered (tiers: ${describeTierPolicy(policy)}) against ${config.baseUrl}`,
+    `[${SERVER_NAME}] ${registered} tools registered (tiers: ${describeTierPolicy(policy)}) against ${source.settings.baseUrl}`,
   )
 
   await server.connect(new StdioServerTransport())

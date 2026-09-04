@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import type { ApiConfig } from '../../auth/api-config.js'
 import { toolByName } from '../registry.js'
 import type { ApiResponse, Ctx, RequestSpec } from '../types.js'
 
@@ -14,18 +13,10 @@ import type { ApiResponse, Ctx, RequestSpec } from '../types.js'
  * against an account owning nothing.
  */
 
-const CONFIG: ApiConfig = {
-  apiKey: 'k',
-  secret: 's',
-  baseUrl: 'https://rest.websupport.sk',
-  acceptLanguage: 'en_us',
-}
-
 function stubCtx(responses: ApiResponse[] = [{ status: 200, body: {} }]) {
   const calls: RequestSpec[] = []
   let index = 0
   const ctx: Ctx = {
-    config: CONFIG,
     request: async (spec) => {
       calls.push(spec)
       return (responses[index++] ?? { status: 200, body: null }) as ApiResponse<never>

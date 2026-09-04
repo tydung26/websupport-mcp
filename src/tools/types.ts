@@ -1,5 +1,4 @@
 import type { z } from 'zod'
-import type { ApiConfig } from '../auth/api-config.js'
 import type { Query } from '../http/build-path-with-query.js'
 
 /**
@@ -40,7 +39,6 @@ export interface ApiResponse<T = unknown> {
  * is configuration and tests need no module mocking.
  */
 export interface Ctx {
-  config: ApiConfig
   request: <T = unknown>(spec: RequestSpec) => Promise<ApiResponse<T>>
 }
 
