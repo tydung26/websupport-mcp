@@ -6,6 +6,7 @@ signed HMAC-SHA1 authentication.
 
 [![npm](https://img.shields.io/npm/v/websupport-mcp)](https://www.npmjs.com/package/websupport-mcp)
 [![licence: MIT](https://img.shields.io/badge/licence-MIT-blue)](LICENSE)
+[![M8ven Score](https://m8ven.ai/badge/mcp/tydung26-websupport-mcp-1i3pwi)](https://m8ven.ai/mcp/tydung26-websupport-mcp-1i3pwi)
 
 **Status: early.** All 50 tools are implemented and published, but most have been verified only as
 far as reaching the API — routes, signing and error handling are proven; response shapes largely are
