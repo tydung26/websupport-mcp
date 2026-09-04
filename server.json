@@ -3,7 +3,7 @@
   "name": "io.github.tydung26/websupport-mcp",
   "title": "Websupport",
   "description": "Manage a Websupport account: DNS, FTP, hosting, databases, mailboxes, VPS and invoices.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "websiteUrl": "https://github.com/tydung26/websupport-mcp#readme",
   "repository": {
     "url": "https://github.com/tydung26/websupport-mcp",
@@ -14,7 +14,7 @@
     {
       "registryType": "npm",
       "identifier": "websupport-mcp",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "transport": {
         "type": "stdio"
       },
