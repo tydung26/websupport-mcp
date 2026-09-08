@@ -48,7 +48,7 @@
     "tsdown": "^0.22.14",
     "typescript": "^7.0.2",
     "vite-node": "^6.0.0",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.0"
   },
   "repository": {
     "type": "git",
