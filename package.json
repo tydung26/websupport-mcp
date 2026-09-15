@@ -45,7 +45,7 @@
     "@types/node": "^22",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
-    "tsdown": "^0.22.14",
+    "tsdown": "^0.23.0",
     "typescript": "^7.0.2",
     "vite-node": "^6.0.0",
     "vitest": "^4.1.11"
